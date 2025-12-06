@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="h2">Admin: Users</h2>
+    <button class="btn btn-primary" id="add-user-btn">➕ Add New User</button>
+  </div>
+
+  <!-- Add User Modal/Form -->
+  <div id="add-user-form" style="display: none; margin-bottom: 20px; padding: 20px; background-color: #f8f9fa; border-radius: 5px;">
+    <h3 class="h3">Add New User</h3>
+    <div class="grid-2 gap-3">
+      <div>
+        <label>Email *</label>
+        <input type="email" id="new-user-email" placeholder="user@example.com" required style="margin-bottom: 10px;">
+        
+        <label>Full Name *</label>
+        <input type="text" id="new-user-name" placeholder="John Doe" required style="margin-bottom: 10px;">
+      </div>
+      <div>
+        <label>Role *</label>
+        <select id="new-user-role" required style="margin-bottom: 10px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+          <option value="">Select Role...</option>
+          <option value="student">Student</option>
+          <option value="teacher">Teacher</option>
+          <option value="admin">Admin</option>
+        </select>
+        
+        <label>Password *</label>
+        <input type="password" id="new-user-password" placeholder="Default password" required style="margin-bottom: 10px;">
+      </div>
+    </div>
+    <div style="margin-top: 15px;">
+      <button class="btn btn-success" id="save-user-btn">💾 Create User</button>
+      <button class="btn btn-secondary" id="cancel-user-btn">❌ Cancel</button>
+    </div>
+    <div id="add-user-status" style="margin-top: 10px;"></div>
+  </div>
+
+  <!-- Users Table -->
+  <div class="table-responsive">
+    <div style="margin-bottom: 15px;">
+      <h4 style="color: #9ca3af; font-size: 14px; margin: 0;">USER MANAGEMENT</h4>
+      <small style="color: #6b7280;">Admins can manage students and teachers. Admin accounts are protected from deletion.</small>
+    </div>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Name</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+          <tr id="user-row-{{ u.id }}" {% if u.role == 'admin' %}style="background-color: rgba(220, 38, 38, 0.1);"{% endif %}>
+            <td style="color: #3b82f6; font-weight: 500;">{{ u.id }}</td>
+            <td style="color: #3b82f6; font-weight: 500;">{{ u.email }}</td>
+            <td>
+              <span class="badge {% if u.role == 'admin' %}badge-danger{% elif u.role == 'teacher' %}badge-warning{% else %}badge-primary{% endif %}">
+                {{ u.role.title() }}
+              </span>
+            </td>
+            <td>{{ u.full_name }}</td>
+            <td>
+              {% if u.role != 'admin' %}
+              <button class="btn btn-sm btn-outline-danger delete-user-btn" data-user-id="{{ u.id }}" data-user-email="{{ u.email }}" data-user-role="{{ u.role }}">
+                🗑️ Delete
+              </button>
+              {% else %}
+              <span class="text-muted" style="font-size: 12px;">
+                🔒 Protected
+              </span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  
+  <div style="margin-top: 20px;">
+    <div class="grid-3 gap-3">
+      <div style="text-align: center; padding: 15px; background-color: rgba(37, 99, 235, 0.1); border-radius: 8px;">
+        <h3 style="margin: 0; color: #2563eb;">{{ users | selectattr('role', 'equalto', 'student') | list | length }}</h3>
+        <small style="color: #6b7280;">Students</small>
+      </div>
+      <div style="text-align: center; padding: 15px; background-color: rgba(245, 158, 11, 0.1); border-radius: 8px;">
+        <h3 style="margin: 0; color: #f59e0b;">{{ users | selectattr('role', 'equalto', 'teacher') | list | length }}</h3>
+        <small style="color: #6b7280;">Teachers</small>
+      </div>
+      <div style="text-align: center; padding: 15px; background-color: rgba(220, 38, 38, 0.1); border-radius: 8px;">
+        <h3 style="margin: 0; color: #dc2626;">{{ users | selectattr('role', 'equalto', 'admin') | list | length }}</h3>
+        <small style="color: #6b7280;">Admins (Protected)</small>
+      </div>
+    </div>
+    <div style="margin-top: 15px; text-align: center; color: #6b7280;">
+      <small>Total Users: {{ users|length }}</small>
+    </div>
+  </div>
+</section>
+
+<script>
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+  // Add user button
+  const addBtn = document.getElementById('add-user-btn');
+  const addForm = document.getElementById('add-user-form');
+  const saveBtn = document.getElementById('save-user-btn');
+  const cancelBtn = document.getElementById('cancel-user-btn');
+  
+  addBtn.addEventListener('click', function() {
+    addForm.style.display = addForm.style.display === 'none' ? 'block' : 'none';
+  });
+  
+  cancelBtn.addEventListener('click', function() {
+    addForm.style.display = 'none';
+    clearForm();
+  });
+  
+  saveBtn.addEventListener('click', createUser);
+  
+  // Delete user buttons
+  const deleteButtons = document.querySelectorAll('.delete-user-btn');
+  deleteButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      const userId = this.getAttribute('data-user-id');
+      const userEmail = this.getAttribute('data-user-email');
+      const userRole = this.getAttribute('data-user-role');
+      deleteUser(userId, userEmail, userRole);
+    });
+  });
+});
+
+async function createUser() {
+  const email = document.getElementById('new-user-email').value.trim();
+  const name = document.getElementById('new-user-name').value.trim();
+  const role = document.getElementById('new-user-role').value;
+  const password = document.getElementById('new-user-password').value;
+  const statusEl = document.getElementById('add-user-status');
+  
+  // Validation
+  if (!email || !name || !role || !password) {
+    statusEl.innerHTML = '<div style="color: red;">❌ Please fill in all fields</div>';
+    return;
+  }
+  
+  if (password.length < 6) {
+    statusEl.innerHTML = '<div style="color: red;">❌ Password must be at least 6 characters</div>';
+    return;
+  }
+  
+  statusEl.innerHTML = '<div style="color: blue;">⏳ Creating user...</div>';
+  
+  try {
+    const response = await fetch('/admin/users/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRFToken()
+      },
+      body: JSON.stringify({
+        email: email,
+        full_name: name,
+        role: role,
+        password: password
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.success) {
+      statusEl.innerHTML = '<div style="color: green;">✅ User created successfully!</div>';
+      
+      // Clear form and hide it
+      setTimeout(() => {
+        clearForm();
+        document.getElementById('add-user-form').style.display = 'none';
+        location.reload(); // Refresh to show new user
+      }, 1500);
+    } else {
+      statusEl.innerHTML = `<div style="color: red;">❌ ${result.error || 'Failed to create user'}</div>`;
+    }
+  } catch (error) {
+    statusEl.innerHTML = `<div style="color: red;">❌ Error: ${error.message}</div>`;
+  }
+}
+
+async function deleteUser(userId, userEmail, userRole) {
+  // Additional protection for admin users
+  if (userRole === 'admin') {
+    alert('❌ Cannot delete admin users for security reasons.');
+    return;
+  }
+  
+  const roleText = userRole.charAt(0).toUpperCase() + userRole.slice(1);
+  if (!confirm(`Are you sure you want to delete ${roleText} "${userEmail}"?\n\nThis will:\n- Remove their account permanently\n- Delete all their classroom enrollments\n- Remove their assessment submissions\n\nThis action cannot be undone.`)) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/admin/users/delete/${userId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRFToken()
+      }
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.success) {
+      // Remove the row from table
+      const row = document.getElementById(`user-row-${userId}`);
+      if (row) {
+        row.style.opacity = '0.5';
+        setTimeout(() => {
+          row.remove();
+          // Update user count
+          const currentCount = document.querySelectorAll('tbody tr').length;
+          const countElement = document.querySelector('small');
+          if (countElement) {
+            countElement.textContent = `Total Users: ${currentCount}`;
+          }
+        }, 300);
+      }
+      
+      alert(`✅ ${roleText} "${userEmail}" has been deleted successfully!`);
+    } else {
+      alert(`❌ ${result.error || 'Failed to delete user'}`);
+    }
+  } catch (error) {
+    alert(`❌ Error deleting user: ${error.message}`);
+  }
+}
+
+function clearForm() {
+  document.getElementById('new-user-email').value = '';
+  document.getElementById('new-user-name').value = '';
+  document.getElementById('new-user-role').value = '';
+  document.getElementById('new-user-password').value = '';
+  document.getElementById('add-user-status').innerHTML = '';
+}
+
+// Helper function for CSRF token
+function getCSRFToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  if (meta) return meta.getAttribute('content');
+  const cookies = document.cookie.split(';');
+  for (let cookie of cookies) {
+    const [name, value] = cookie.trim().split('=');
+    if (name === 'csrf_token') return value;
+  }
+  return '';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}MySQL Database Integration - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">MySQL Database Integration</h3>
+                    <p class="text-muted">Configure and manage MySQL database access for AI chatbot context</p>
+                </div>
+                <div class="card-body">
+                    
+                    <!-- Configuration Status -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>Configuration Status</h5>
+                            <div class="list-group">
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    Database URL
+                                    <span class="badge badge-{{ 'success' if config.database_url else 'secondary' }}">
+                                        {{ 'Configured' if config.database_url else 'Not Set' }}
+                                    </span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    MySQL Host
+                                    <span class="text-muted">{{ config.mysql_host }}</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    MySQL User
+                                    <span class="text-muted">{{ config.mysql_user }}</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    MySQL Database
+                                    <span class="text-muted">{{ config.mysql_database }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5>Connection Status</h5>
+                            <div class="alert alert-{{ 'success' if 'Connected' in config.connection_status else 'warning' }}">
+                                <strong>Status:</strong> {{ config.connection_status }}
+                            </div>
+                            
+                            <button class="btn btn-primary" onclick="testConnection()">
+                                <i class="fas fa-plug"></i> Test Connection
+                            </button>
+                            
+                            <button class="btn btn-info ml-2" onclick="getSchema()">
+                                <i class="fas fa-database"></i> View Schema
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Configuration Instructions -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Configuration Instructions</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p>To enable MySQL database access for the AI chatbot, configure your database connection in the <code>.env</code> file:</p>
+                                    
+                                    <h6>Option 1: Using DATABASE_URL (recommended for production)</h6>
+                                    <pre><code>DATABASE_URL=mysql+mysqlconnector://username:password@host:3306/database_name</code></pre>
+                                    
+                                    <h6>Option 2: Using individual environment variables</h6>
+                                    <pre><code>MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_USER=your_username
+MYSQL_PASSWORD=your_password
+MYSQL_DATABASE=your_database_name</code></pre>
+                                    
+                                    <div class="alert alert-info mt-3">
+                                        <strong>Note:</strong> After updating the configuration, restart the Flask application for changes to take effect.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Query Interface -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Query Interface</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-group">
+                                        <label for="sqlQuery">SQL Query (SELECT only for safety)</label>
+                                        <textarea class="form-control" id="sqlQuery" rows="3" placeholder="SELECT * FROM your_table LIMIT 5;"></textarea>
+                                    </div>
+                                    <button class="btn btn-success" onclick="executeQuery()">
+                                        <i class="fas fa-play"></i> Execute Query
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Context Search Test -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>AI Context Search Test</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-group">
+                                        <label for="searchTerm">Search Term</label>
+                                        <input type="text" class="form-control" id="searchTerm" placeholder="Enter a search term to test context retrieval...">
+                                    </div>
+                                    <button class="btn btn-primary" onclick="searchContext()">
+                                        <i class="fas fa-search"></i> Test Context Search
+                                    </button>
+                                    <small class="form-text text-muted">
+                                        This tests how the AI chatbot will search your database for relevant context.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Results Area -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Results</h5>
+                                </div>
+                                <div class="card-body">
+                                    <pre id="results" style="max-height: 400px; overflow-y: auto;">Click any button above to see results here...</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showResults(data) {
+    document.getElementById('results').textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+}
+
+function showError(message) {
+    document.getElementById('results').textContent = 'Error: ' + message;
+    document.getElementById('results').style.color = 'red';
+}
+
+function resetResultsColor() {
+    document.getElementById('results').style.color = '';
+}
+
+function testConnection() {
+    resetResultsColor();
+    fetch('/mysql/test', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showError(data.error);
+        } else {
+            showResults({
+                status: 'Connection successful!',
+                mysql_version: data.version,
+                total_tables: data.total_tables,
+                sample_tables: data.tables
+            });
+        }
+    })
+    .catch(error => showError('Request failed: ' + error));
+}
+
+function getSchema() {
+    resetResultsColor();
+    fetch('/mysql/schema', {
+        headers: {
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showError(data.error);
+        } else {
+            showResults(data.schema);
+        }
+    })
+    .catch(error => showError('Request failed: ' + error));
+}
+
+function executeQuery() {
+    resetResultsColor();
+    const query = document.getElementById('sqlQuery').value;
+    if (!query.trim()) {
+        showError('Please enter a SQL query');
+        return;
+    }
+    
+    fetch('/mysql/query', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({query: query})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showError(data.error);
+        } else {
+            showResults(data.result);
+        }
+    })
+    .catch(error => showError('Request failed: ' + error));
+}
+
+function searchContext() {
+    resetResultsColor();
+    const searchTerm = document.getElementById('searchTerm').value;
+    if (!searchTerm.trim()) {
+        showError('Please enter a search term');
+        return;
+    }
+    
+    fetch('/mysql/search_context', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({search_term: searchTerm})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showError(data.error);
+        } else {
+            showResults(data.context);
+        }
+    })
+    .catch(error => showError('Request failed: ' + error));
+}
+</script>
+{% endblock %}

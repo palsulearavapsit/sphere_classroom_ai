@@ -1,0 +1,495 @@
+{% extends "base.html" %}
+
+{% block title %}Image Analysis - AI Platform{% endblock %}
+
+{% block header %}
+<div class="d-flex justify-content-between align-items-center">
+    <h1 class="h3 mb-0 text-gray-800">
+        <i class="fas fa-eye text-primary"></i>
+        AI Image Analysis
+    </h1>
+    <div class="btn-group">
+        <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+            <i class="fas fa-plus"></i> New Analysis
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" onclick="triggerUpload()"><i class="fas fa-upload"></i> Upload Image</a></li>
+            <li><a class="dropdown-item" href="#batchAnalysis" data-bs-toggle="modal"><i class="fas fa-layer-group"></i> Batch Analysis</a></li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Analysis Types Overview -->
+    <div class="col-12 mb-4">
+        <div class="alert alert-info">
+            <h5><i class="fas fa-robot"></i> AI Vision Analysis Capabilities</h5>
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>🧮 Math Equations:</strong> Solve and explain mathematical problems
+                </div>
+                <div class="col-md-3">
+                    <strong>🧪 Science Diagrams:</strong> Analyze lab results and scientific charts
+                </div>
+                <div class="col-md-3">
+                    <strong>📊 Data Visualization:</strong> Extract insights from charts and graphs
+                </div>
+                <div class="col-md-3">
+                    <strong>📋 General Analysis:</strong> Describe and analyze any image content
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Section -->
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-upload"></i> Upload & Analyze Image
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="imageAnalysisForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="imageFile" class="form-label">Select Image to Analyze</label>
+                        <input type="file" class="form-control" id="imageFile" name="image" 
+                               accept="image/*" required>
+                        <div class="form-text">Supported formats: JPG, PNG, GIF, WEBP (Max: 10MB)</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="analysisType" class="form-label">Analysis Type</label>
+                        <select class="form-select" id="analysisType" name="analysis_type" required>
+                            <option value="">Select analysis type...</option>
+                            <option value="math">🧮 Math Problem/Equation</option>
+                            <option value="science">🧪 Science Diagram/Lab Result</option>
+                            <option value="chart">📊 Chart/Graph Analysis</option>
+                            <option value="general">📋 General Description</option>
+                            <option value="text">📝 Text Extraction (OCR)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="customPrompt" class="form-label">Custom Instructions (Optional)</label>
+                        <textarea class="form-control" id="customPrompt" name="custom_prompt" rows="3"
+                                  placeholder="Add specific instructions or questions about the image..."></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-eye"></i> Analyze Image
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="clearForm()">
+                        <i class="fas fa-times"></i> Clear
+                    </button>
+                </form>
+                
+                <!-- Image Preview -->
+                <div id="imagePreview" class="mt-4" style="display: none;">
+                    <h6>Image Preview:</h6>
+                    <img id="previewImg" src="" alt="Preview" class="img-fluid border rounded" style="max-height: 300px;">
+                </div>
+                
+                <!-- Analysis Progress -->
+                <div id="analysisProgress" class="mt-4" style="display: none;">
+                    <div class="alert alert-info">
+                        <i class="fas fa-spinner fa-spin"></i> Analyzing image with AI Vision...
+                        <div class="progress mt-2">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 100%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Analysis Results -->
+                <div id="analysisResult" class="mt-4" style="display: none;">
+                    <div class="alert alert-success">
+                        <h6><i class="fas fa-check"></i> Analysis Complete!</h6>
+                        <div id="resultContent" class="mt-3"></div>
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-outline-primary" onclick="copyResult()">
+                                <i class="fas fa-copy"></i> Copy Result
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" onclick="downloadResult()">
+                                <i class="fas fa-download"></i> Download
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis History -->
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-history"></i> Recent Analyses
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="recentAnalyses">
+                    {% if recent_analyses %}
+                        {% for analysis in recent_analyses %}
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="icon-circle bg-primary">
+                                {% if analysis.analysis_type == 'math' %}
+                                    <i class="fas fa-calculator text-white"></i>
+                                {% elif analysis.analysis_type == 'science' %}
+                                    <i class="fas fa-flask text-white"></i>
+                                {% elif analysis.analysis_type == 'chart' %}
+                                    <i class="fas fa-chart-bar text-white"></i>
+                                {% else %}
+                                    <i class="fas fa-image text-white"></i>
+                                {% endif %}
+                            </div>
+                            <div class="ms-3">
+                                <div class="small font-weight-bold text-primary">
+                                    {{ analysis.analysis_type.title() }} Analysis
+                                </div>
+                                <div class="small text-gray-500">
+                                    {{ analysis.created_at.strftime('%m/%d/%Y %I:%M %p') }}
+                                </div>
+                            </div>
+                        </div>
+                        {% if not loop.last %}<hr>{% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-gray-500">
+                            <i class="fas fa-images fa-2x mb-2"></i>
+                            <p>No analyses yet. Upload an image to get started!</p>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="text-center mt-3">
+                    <a class="small" href="/image-analysis/history">View All Analyses</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Analysis Tips -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-lightbulb"></i> Analysis Tips
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="small">
+                    <h6 class="text-primary">📸 For Best Results:</h6>
+                    <ul class="mb-3">
+                        <li>Use high-resolution images</li>
+                        <li>Ensure good lighting and clarity</li>
+                        <li>Avoid blurry or distorted images</li>
+                        <li>Include relevant context in frame</li>
+                    </ul>
+                    
+                    <h6 class="text-primary">🧮 Math Problems:</h6>
+                    <ul class="mb-3">
+                        <li>Handwritten or printed equations</li>
+                        <li>Geometry diagrams</li>
+                        <li>Graph analysis</li>
+                    </ul>
+                    
+                    <h6 class="text-primary">🧪 Science Content:</h6>
+                    <ul>
+                        <li>Lab equipment and setups</li>
+                        <li>Chemical structures</li>
+                        <li>Biological diagrams</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-chart-pie"></i> Analysis Stats
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row no-gutters align-items-center mb-3">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Images Analyzed
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_analyses or 0 }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-eye fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+                
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Accuracy Rate
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ accuracy_rate or '95' }}%</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-bullseye fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Batch Analysis Modal -->
+<div class="modal fade" id="batchAnalysis" tabindex="-1" aria-labelledby="batchAnalysisLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="batchAnalysisLabel">
+                    <i class="fas fa-layer-group"></i> Batch Image Analysis
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="batchAnalysisForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="batchImages" class="form-label">Select Multiple Images</label>
+                        <input type="file" class="form-control" id="batchImages" name="images" 
+                               accept="image/*" multiple required>
+                        <div class="form-text">Select up to 10 images for batch analysis</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="batchAnalysisType" class="form-label">Analysis Type</label>
+                        <select class="form-select" id="batchAnalysisType" name="analysis_type" required>
+                            <option value="general">General Description</option>
+                            <option value="math">Math Problems</option>
+                            <option value="science">Science Content</option>
+                            <option value="text">Text Extraction</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="startBatchAnalysis()">
+                    <i class="fas fa-play"></i> Start Batch Analysis
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Image preview functionality
+document.getElementById('imageFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('previewImg').src = e.target.result;
+            document.getElementById('imagePreview').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Main form submission
+document.getElementById('imageAnalysisForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Validate required fields
+    const imageFile = document.getElementById('imageFile').files[0];
+    const analysisType = document.getElementById('analysisType').value;
+    
+    if (!imageFile) {
+        alert('Please select an image file');
+        return;
+    }
+    
+    if (!analysisType) {
+        alert('Please select an analysis type');
+        return;
+    }
+    
+    console.log('Form submission:', {
+        fileName: imageFile.name,
+        fileSize: imageFile.size,
+        fileType: imageFile.type,
+        analysisType: analysisType
+    });
+    
+    const formData = new FormData(this);
+    
+    // Log FormData contents
+    for (let [key, value] of formData.entries()) {
+        console.log(`FormData ${key}:`, value);
+    }
+    
+    const progressDiv = document.getElementById('analysisProgress');
+    const resultDiv = document.getElementById('analysisResult');
+    
+    // Show progress
+    progressDiv.style.display = 'block';
+    resultDiv.style.display = 'none';
+    
+    fetch('/image-analysis/analyze', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
+        },
+        body: formData
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        if (!response.ok) {
+            return response.text().then(text => {
+                console.error('Response body:', text);
+                throw new Error(`HTTP error! status: ${response.status}, body: ${text}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        progressDiv.style.display = 'none';
+        
+        console.log('Analysis response:', data);
+        console.log('Result field:', data.result);
+        console.log('Result type:', typeof data.result);
+        
+        if (data.success) {
+            document.getElementById('resultContent').innerHTML = formatAnalysisResult(data.result);
+            resultDiv.style.display = 'block';
+            // Store result for copy/download
+            window.currentResult = data.result;
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error occurred') + (data.debug ? '\nDebug: ' + data.debug : ''));
+        }
+    })
+    .catch(error => {
+        progressDiv.style.display = 'none';
+        console.error('Full error:', error);
+        alert('Failed to analyze image: ' + error.message + '. Please check the console for more details.');
+    });
+});
+
+function formatAnalysisResult(result) {
+    console.log('Formatting result:', result, 'Type:', typeof result);
+    
+    let displayContent = '';
+    
+    if (typeof result === 'string') {
+        // Simple string result
+        displayContent = result.replace(/\n/g, '<br>');
+    } else if (typeof result === 'object' && result !== null) {
+        // Object result - format as JSON or extract specific fields
+        if (result.analysis) {
+            displayContent = result.analysis.replace(/\n/g, '<br>');
+        } else if (result.content) {
+            displayContent = result.content.replace(/\n/g, '<br>');
+        } else if (result.description) {
+            displayContent = result.description.replace(/\n/g, '<br>');
+        } else {
+            // Format as pretty JSON
+            displayContent = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+        }
+    } else {
+        // Fallback for any other type
+        displayContent = String(result);
+    }
+    
+    return `
+        <div class="bg-light p-3 rounded">
+            <h6>Analysis Result:</h6>
+            <div class="text-break">${displayContent}</div>
+        </div>
+    `;
+}
+
+function triggerUpload() {
+    document.getElementById('imageFile').click();
+}
+
+function clearForm() {
+    document.getElementById('imageAnalysisForm').reset();
+    document.getElementById('imagePreview').style.display = 'none';
+    document.getElementById('analysisResult').style.display = 'none';
+    document.getElementById('analysisProgress').style.display = 'none';
+}
+
+function copyResult() {
+    if (window.currentResult) {
+        navigator.clipboard.writeText(window.currentResult).then(function() {
+            alert('Result copied to clipboard!');
+        });
+    }
+}
+
+function downloadResult() {
+    if (window.currentResult) {
+        const blob = new Blob([window.currentResult], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'analysis-result.txt';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    }
+}
+
+function startBatchAnalysis() {
+    const form = document.getElementById('batchAnalysisForm');
+    const formData = new FormData(form);
+    
+    if (formData.get('images').length === 0) {
+        alert('Please select at least one image.');
+        return;
+    }
+    
+    // Close modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('batchAnalysis'));
+    modal.hide();
+    
+    // Show progress in main area
+    const progressDiv = document.getElementById('analysisProgress');
+    progressDiv.style.display = 'block';
+    
+    fetch('/image-analysis/batch', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        progressDiv.style.display = 'none';
+        
+        if (data.success) {
+            alert('Batch analysis completed! Results will be available in your history.');
+            // Refresh the page to show updated history
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        progressDiv.style.display = 'none';
+        console.error('Error:', error);
+        alert('Failed to complete batch analysis. Please try again.');
+    });
+}
+</script>
+
+<style>
+.icon-circle {
+    height: 2rem;
+    width: 2rem;
+    border-radius: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+</style>
+{% endblock %}

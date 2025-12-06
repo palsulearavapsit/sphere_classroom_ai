@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2 class="h2">📊 Analytics Dashboard</h2>
+  
+  <div class="grid-2 gap-3">
+    <!-- Performance Overview -->
+    <div class="card">
+      <h3 class="h3">Performance Overview</h3>
+      <div id="performance-chart" style="height: 400px;"></div>
+      <button class="btn" onclick="loadChart('student_performance')">Refresh Data</button>
+    </div>
+    
+    <!-- Assessment Analytics -->
+    <div class="card">
+      <h3 class="h3">Assessment Analytics</h3>
+      <div id="assessment-chart" style="height: 400px;"></div>
+      <button class="btn" onclick="loadChart('assessment_analytics')">Refresh Data</button>
+    </div>
+  </div>
+  
+  <div class="grid-3 gap-3" style="margin-top: 20px;">
+    <!-- Learning Progress -->
+    <div class="card">
+      <h3 class="h3">Learning Progress</h3>
+      <div id="progress-chart" style="height: 300px;"></div>
+      <button class="btn" onclick="loadChart('learning_progress')">View Progress</button>
+    </div>
+    
+    <!-- Quick Stats -->
+    <div class="card">
+      <h3 class="h3">Quick Statistics</h3>
+      <div id="quick-stats">
+        <div class="stat-item">
+          <strong>Total Students:</strong> <span id="total-students">-</span>
+        </div>
+        <div class="stat-item">
+          <strong>Active Assessments:</strong> <span id="active-assessments">-</span>
+        </div>
+        <div class="stat-item">
+          <strong>Avg Performance:</strong> <span id="avg-performance">-</span>%
+        </div>
+      </div>
+      <button class="btn" onclick="loadStats()">Update Stats</button>
+    </div>
+    
+    <!-- Export Options -->
+    <div class="card">
+      <h3 class="h3">Export & Reports</h3>
+      <div class="grid-1 gap-2">
+        <button class="btn btn-primary" onclick="exportData('performance')">📊 Export Performance Data</button>
+        <button class="btn btn-primary" onclick="exportData('assessments')">📝 Export Assessment Data</button>
+        <button class="btn btn-primary" onclick="generateReport()">📄 Generate Full Report</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+async function loadChart(chartType) {
+  const chartDiv = chartType === 'student_performance' ? 'performance-chart' : 
+                   chartType === 'assessment_analytics' ? 'assessment-chart' : 
+                   'progress-chart';
+  
+  try {
+    document.getElementById(chartDiv).innerHTML = '<div style="text-align: center; padding: 50px;">Loading chart...</div>';
+    
+    const response = await fetch(`/analytics/api/performance-chart/${chartType}`, {
+      headers: {
+        'X-CSRFToken': getCSRFToken()
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      const chartData = JSON.parse(data.chart);
+      Plotly.newPlot(chartDiv, chartData.data, chartData.layout, {responsive: true});
+    } else {
+      document.getElementById(chartDiv).innerHTML = '<div style="text-align: center; padding: 50px; color: red;">Error loading chart</div>';
+    }
+  } catch (error) {
+    document.getElementById(chartDiv).innerHTML = `<div style="text-align: center; padding: 50px; color: red;">Error: ${error.message}</div>`;
+  }
+}
+
+async function loadStats() {
+  try {
+    const response = await fetch('/analytics/api/system-stats', {
+      headers: {
+        'X-CSRFToken': getCSRFToken()
+      }
+    });
+    
+    if (response.ok) {
+      const stats = await response.json();
+      document.getElementById('total-students').textContent = stats.total_students || 0;
+      document.getElementById('active-assessments').textContent = stats.total_assessments || 0;
+      document.getElementById('avg-performance').textContent = (stats.avg_performance || 0).toFixed(1);
+    }
+  } catch (error) {
+    console.error('Error loading stats:', error);
+  }
+}
+
+async function exportData(type) {
+  try {
+    const endpoint = type === 'performance' ? '/analytics/api/student-performance' : '/analytics/api/assessment-analytics';
+    const response = await fetch(endpoint, {
+      headers: {
+        'X-CSRFToken': getCSRFToken()
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      const dataStr = JSON.stringify(data, null, 2);
+      const dataBlob = new Blob([dataStr], {type: 'application/json'});
+      
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(dataBlob);
+      link.download = `${type}_data_${new Date().toISOString().split('T')[0]}.json`;
+      link.click();
+    }
+  } catch (error) {
+    alert(`Error exporting data: ${error.message}`);
+  }
+}
+
+function generateReport() {
+  alert('Full report generation would integrate with a reporting system like ReportLab or similar.');
+}
+
+function getCSRFToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.getAttribute('content') : '';
+}
+
+// Load initial data
+document.addEventListener('DOMContentLoaded', function() {
+  loadChart('student_performance');
+  loadStats();
+});
+</script>
+
+<style>
+.stat-item {
+  margin: 10px 0;
+  padding: 8px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+</style>
+{% endblock %}

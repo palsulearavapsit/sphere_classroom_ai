@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero slide-up">
+  <h1 class="h1">Welcome Teacher</h1>
+  <p class="lead text-pretty">Manage your classrooms, create assessments, and track student progress.</p>
+  
+  <!-- My Classes Section -->
+  <h3 class="h3 mt-3">📚 My Classes</h3>
+  <div class="card" style="margin-bottom: 20px;">
+    {% if classrooms %}
+      <div class="grid-2 gap-3">
+        {% for classroom in classrooms %}
+        <div class="card" style="padding: 15px; border-left: 4px solid #28a745;">
+          <h4 style="margin: 0 0 8px 0; color: #28a745;">{{ classroom.name }}</h4>
+          <p style="margin: 0 0 8px 0; color: #666; font-size: 0.9em;">
+            <strong>Join Code:</strong> 
+            <span style="font-family: monospace; background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">{{ classroom.join_code }}</span>
+          </p>
+          <div style="display: flex; gap: 10px;">
+            <a href="/classrooms/{{ classroom.id }}" class="btn btn-sm btn-outline-primary">View Classroom</a>
+            <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('{{ classroom.join_code }}')">
+              📋 Copy Code
+            </button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 30px; color: #666;">
+        <i class="fas fa-chalkboard-teacher" style="font-size: 3em; margin-bottom: 15px; opacity: 0.3;"></i>
+        <p>You haven't created any classrooms yet.</p>
+        <a href="/classrooms/" class="btn btn-primary">Create Your First Classroom</a>
+      </div>
+    {% endif %}
+  </div>
+  
+  <h3 class="h3 mt-3">Classroom Management</h3>
+  <div class="grid-2 gap-3">
+    <a class="card link" href="/classrooms/">
+      <h4>📚 Classroom Manager</h4>
+      <p>Create and manage your classrooms</p>
+    </a>
+    <a class="card link" href="/assessments/">
+      <h4>📝 Assignments & Tests</h4>
+      <p>Create and grade assessments</p>
+    </a>
+  </div>
+  
+  <h3 class="h3 mt-3">Teaching Tools</h3>
+  <div class="grid-3 gap-3">
+    <a class="card link" href="/notifications/live-chat">
+      <h4>💬 Live Chat</h4>
+      <p>Communicate with students in real-time</p>
+    </a>
+    <a class="card link" href="/tutor/">
+      <h4>🧠 AI Tutor</h4>
+      <p>Use AI assistance for lesson planning</p>
+    </a>
+    <a class="card link" href="/ocr/">
+      <h4>🔍 Document Scanner</h4>
+      <p>Extract text from student submissions</p>
+    </a>
+  </div>
+  
+  <h3 class="h3 mt-3">AI Teaching Assistant</h3>
+  <div class="grid-4 gap-3">
+    <a class="card link" href="/content/">
+      <h4>✨ Content Generator</h4>
+      <p>Create quizzes, assignments, and study materials</p>
+    </a>
+    <a class="card link" href="/grading/">
+      <h4>🤖 AI Grading</h4>
+      <p>Automated essay grading and feedback</p>
+    </a>
+    <a class="card link" href="/plagiarism/">
+      <h4>🔍 Plagiarism Check</h4>
+      <p>Detect copied content in student work</p>
+    </a>
+    <a class="card link" href="/image-analysis/">
+      <h4>📸 Image Analysis</h4>
+      <p>AI analysis of student diagrams and charts</p>
+    </a>
+  </div>
+</section>
+
+<script>
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(function() {
+    alert('Join code copied to clipboard: ' + text);
+  }, function(err) {
+    console.error('Could not copy text: ', err);
+    prompt('Copy this join code:', text);
+  });
+}
+</script>
+{% endblock %}

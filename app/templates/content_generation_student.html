@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% block title %}Content Generation - Student Access{% endblock %}
+
+{% block header %}
+<div class="d-flex justify-content-between align-items-center">
+    <h1 class="h3 mb-0 text-gray-800">
+        <i class="fas fa-robot text-primary"></i>
+        Study Tools Generator
+    </h1>
+    <div class="badge bg-info fs-6">Student Access</div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Student Features Info -->
+    <div class="col-12 mb-4">
+        <div class="alert alert-info">
+            <h5><i class="fas fa-graduation-cap"></i> Available Study Tools</h5>
+            <p class="mb-2">As a student, you can generate study materials from text content:</p>
+            <div class="row">
+                <div class="col-md-4">
+                    <strong>📝 Practice Quizzes:</strong> Test your knowledge
+                </div>
+                <div class="col-md-4">
+                    <strong>📚 Study Guides:</strong> Organize your learning
+                </div>
+                <div class="col-md-4">
+                    <strong>🃏 Flashcards:</strong> Quick review cards
+                </div>
+            </div>
+            <small class="text-muted mt-2 d-block">
+                <i class="fas fa-info-circle"></i> File upload features are available to teachers and administrators only.
+            </small>
+        </div>
+    </div>
+
+    <!-- Text-based Content Generation -->
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-keyboard"></i> Generate from Text
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="studentContentForm">
+                    <div class="mb-3">
+                        <label for="studyText" class="form-label">Paste your study content</label>
+                        <textarea class="form-control" id="studyText" name="text" rows="8" 
+                                  placeholder="Paste your notes, textbook content, or any material you want to study..."
+                                  required></textarea>
+                        <div class="form-text">Copy and paste text from your books, notes, or online resources</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="contentType" class="form-label">What do you want to create?</label>
+                        <select class="form-select" id="contentType" name="content_type" required>
+                            <option value="">Choose study tool...</option>
+                            <option value="quiz">📝 Practice Quiz (Multiple Choice)</option>
+                            <option value="study_guide">📚 Study Guide</option>
+                            <option value="flashcards">🃏 Flashcards</option>
+                            <option value="summary">📄 Summary</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="difficulty" class="form-label">Difficulty Level</label>
+                        <select class="form-select" id="difficulty" name="difficulty">
+                            <option value="beginner">🟢 Beginner (Basic concepts)</option>
+                            <option value="intermediate" selected>🟡 Intermediate (Standard level)</option>
+                            <option value="advanced">🔴 Advanced (Challenging)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3" id="questionCount" style="display: none;">
+                        <label for="numQuestions" class="form-label">Number of Questions</label>
+                        <select class="form-select" id="numQuestions" name="num_questions">
+                            <option value="5">5 questions</option>
+                            <option value="10" selected>10 questions</option>
+                            <option value="15">15 questions</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-magic"></i> Generate Study Material
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Study Tips -->
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-success">
+                    <i class="fas fa-lightbulb"></i> Study Tips
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        <strong>Practice Quizzes:</strong> Test yourself regularly to improve retention
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        <strong>Study Guides:</strong> Break down complex topics into manageable sections
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        <strong>Flashcards:</strong> Perfect for memorizing key terms and concepts
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        <strong>Summaries:</strong> Get the main points quickly before exams
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-warning">
+                    <i class="fas fa-star"></i> Need More Features?
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    Want to upload PDF files or access advanced features? 
+                    Ask your teacher to upgrade your account or contact an administrator.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Results Section -->
+<div class="row mt-4" id="resultsSection" style="display: none;">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-success">
+                    <i class="fas fa-check-circle"></i> Your Study Material
+                </h6>
+            </div>
+            <div class="card-body" id="generatedContent">
+                <!-- Generated content will appear here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5>🤖 AI is creating your study material...</h5>
+                <p class="text-muted mb-0">This may take a few moments</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Show question count for quiz generation
+document.getElementById('contentType').addEventListener('change', function() {
+    const questionCount = document.getElementById('questionCount');
+    if (this.value === 'quiz') {
+        questionCount.style.display = 'block';
+    } else {
+        questionCount.style.display = 'none';
+    }
+});
+
+// Handle form submission
+document.getElementById('studentContentForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+    
+    // Show loading
+    loadingModal.show();
+    
+    // Prepare request data
+    const requestData = {
+        text: formData.get('text'),
+        content_type: formData.get('content_type'),
+        num_questions: parseInt(formData.get('num_questions') || '10'),
+        difficulty: formData.get('difficulty')
+    };
+    
+    // Submit to backend
+    fetch('/content/generate-text', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        loadingModal.hide();
+        
+        if (data.success) {
+            document.getElementById('generatedContent').innerHTML = formatContent(data.content, requestData.content_type);
+            document.getElementById('resultsSection').style.display = 'block';
+            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+        } else {
+            alert('Error generating content: ' + data.error);
+        }
+    })
+    .catch(error => {
+        loadingModal.hide();
+        console.error('Error:', error);
+        alert('Failed to generate content. Please try again.');
+    });
+});
+
+// Format content based on type
+function formatContent(content, type) {
+    switch(type) {
+        case 'quiz':
+            return formatQuiz(content);
+        case 'study_guide':
+            return formatStudyGuide(content);
+        case 'flashcards':
+            return formatFlashcards(content);
+        case 'summary':
+            return formatSummary(content);
+        default:
+            return '<pre>' + JSON.stringify(content, null, 2) + '</pre>';
+    }
+}
+
+function formatQuiz(questions) {
+    if (typeof questions === 'string') {
+        return '<div class="alert alert-success">' + questions.replace(/\n/g, '<br>') + '</div>';
+    }
+    
+    let html = '<h6>📝 Your Practice Quiz</h6>';
+    if (Array.isArray(questions)) {
+        questions.forEach((q, index) => {
+            html += `
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h6>Question ${index + 1}</h6>
+                        <p><strong>${q.question || q}</strong></p>
+                        ${q.options ? `
+                            <ul>
+                                ${q.options.map(opt => `<li>${opt}</li>`).join('')}
+                            </ul>
+                        ` : ''}
+                        ${q.answer ? `<p><em>Answer: ${q.answer}</em></p>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+    } else {
+        html += '<div class="alert alert-info">' + questions + '</div>';
+    }
+    return html;
+}
+
+function formatStudyGuide(guide) {
+    return '<h6>📚 Your Study Guide</h6><div class="card"><div class="card-body">' + 
+           (typeof guide === 'string' ? guide.replace(/\n/g, '<br>') : JSON.stringify(guide)) + 
+           '</div></div>';
+}
+
+function formatFlashcards(cards) {
+    return '<h6>🃏 Your Flashcards</h6><div class="card"><div class="card-body">' + 
+           (typeof cards === 'string' ? cards.replace(/\n/g, '<br>') : JSON.stringify(cards)) + 
+           '</div></div>';
+}
+
+function formatSummary(summary) {
+    return '<h6>📄 Your Summary</h6><div class="card"><div class="card-body">' + 
+           (typeof summary === 'string' ? summary.replace(/\n/g, '<br>') : JSON.stringify(summary)) + 
+           '</div></div>';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,703 @@
+{% extends "base.html" %}
+
+{% block title %}🔍 AI Plagiarism Detection{% endblock %}
+
+{% block content %}
+<section class="card">
+    <h2 class="h2">🔍 AI Plagiarism Detection</h2>
+    <p class="muted">Advanced AI-powered plagiarism detection for academic integrity</p>
+    
+    <!-- Action Buttons -->
+    <div style="margin-bottom: 20px;">
+        <button type="button" class="btn" onclick="showCheckModal()">
+            📝 Check Text
+        </button>
+        <button type="button" class="btn" onclick="showBatchModal()">
+            📋 Batch Check
+        </button>
+        {% if current_user.role == 'admin' %}
+        <button type="button" class="btn" onclick="showSettingsModal()">
+            ⚙️ Settings
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Statistics Grid -->
+    <div class="grid-4 gap-3" style="margin-bottom: 20px;">
+        <div class="panel">
+            <h3 class="h3" style="color: var(--primary);">{{ stats.total_checks or 0 }}</h3>
+            <p class="muted">Total Checks</p>
+        </div>
+        <div class="panel">
+            <h3 class="h3" style="color: #dc3545;">{{ stats.high_risk or 0 }}</h3>
+            <p class="muted">High Risk</p>
+        </div>
+        <div class="panel">
+            <h3 class="h3" style="color: #ffc107;">{{ stats.medium_risk or 0 }}</h3>
+            <p class="muted">Medium Risk</p>
+        </div>
+        <div class="panel">
+            <h3 class="h3" style="color: #28a745;">{{ stats.low_risk or 0 }}</h3>
+            <p class="muted">Low Risk</p>
+        </div>
+    </div>
+</section>
+
+<!-- Quick Text Check -->
+<section class="card">
+    <h3 class="h3">🔍 Quick Plagiarism Check</h3>
+    <div style="margin-bottom: 15px;">
+        <label for="quickCheckText">Text to Check</label>
+        <textarea id="quickCheckText" rows="6" placeholder="Paste text here to check for plagiarism..." style="width: 100%; margin-top: 5px;"></textarea>
+        <small class="muted">Minimum 50 characters required for analysis</small>
+    </div>
+    <div style="margin-bottom: 15px;">
+        <label for="assignmentSelect">Assignment (Optional)</label>
+        <select id="assignmentSelect" style="width: 100%; margin-top: 5px;">
+            <option value="">Select assignment...</option>
+            <!-- Will be populated by JavaScript -->
+        </select>
+    </div>
+    <button type="button" class="btn" onclick="performQuickCheck()">
+        🔍 Check Plagiarism
+    </button>
+    
+    <!-- Quick check results -->
+    <div id="quickCheckResults" style="margin-top: 20px; display: none;"></div>
+</section>
+
+<!-- Recent Checks -->
+<section class="card">
+    <h3 class="h3">📋 Recent Plagiarism Checks</h3>
+    {% if recent_checks %}
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="background: var(--panel); border-bottom: 1px solid #374151;">
+                <th style="padding: 12px; text-align: left;">Date</th>
+                <th style="padding: 12px; text-align: left;">User</th>
+                <th style="padding: 12px; text-align: left;">Assignment</th>
+                <th style="padding: 12px; text-align: left;">Score</th>
+                <th style="padding: 12px; text-align: left;">Risk Level</th>
+                <th style="padding: 12px; text-align: left;">Sample Text</th>
+                <th style="padding: 12px; text-align: left;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for check in recent_checks %}
+            <tr style="border-bottom: 1px solid #374151;">
+                <td style="padding: 12px;">{{ check.created_at_str[:10] if check.created_at_str else 'N/A' }}</td>
+                <td style="padding: 12px;">{{ check.user_email or 'Unknown' }}</td>
+                <td style="padding: 12px;">{{ check.assignment_title or 'Direct Check' }}</td>
+                <td style="padding: 12px;">
+                    {% if check.plagiarism_score >= 0.8 %}
+                    <span class="score-badge score-high">
+                    {% elif check.plagiarism_score >= 0.6 %}
+                    <span class="score-badge score-medium">
+                    {% else %}
+                    <span class="score-badge score-low">
+                    {% endif %}
+                        {{ "%.1f"|format(check.plagiarism_score * 100) }}%
+                    </span>
+                </td>
+                <td style="padding: 12px;">
+                    {% if check.plagiarism_score >= 0.8 %}
+                    <span class="risk-badge risk-very-high">Very High</span>
+                    {% elif check.plagiarism_score >= 0.6 %}
+                    <span class="risk-badge risk-high">High</span>
+                    {% elif check.plagiarism_score >= 0.4 %}
+                    <span class="risk-badge risk-medium">Medium</span>
+                    {% else %}
+                    <span class="risk-badge risk-low">Low</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 12px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    {{ check.content_sample[:50] + '...' if check.content_sample and check.content_sample|length > 50 else check.content_sample or 'N/A' }}
+                </td>
+                <td style="padding: 12px;">
+                    <button class="btn" data-check-id="{{ check.id }}" onclick="viewCheckDetails('{{ check.id }}')">
+                        👁️ View
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="muted" style="text-align: center; padding: 20px;">No plagiarism checks found</p>
+    {% endif %}
+</section>
+
+<!-- Check Text Modal -->
+<div class="modal fade" id="checkModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">📝 Check Text for Plagiarism</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="checkForm">
+                    <div class="mb-3">
+                        <label for="checkText" class="form-label">Text to Analyze</label>
+                        <textarea class="form-control" id="checkText" rows="8" placeholder="Paste the text you want to check for plagiarism..." required></textarea>
+                        <div class="form-text">Minimum 50 characters required for meaningful analysis</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="checkAssignment" class="form-label">Assignment (Optional)</label>
+                        <select class="form-select" id="checkAssignment">
+                            <option value="">Select assignment...</option>
+                            <!-- Will be populated by JavaScript -->
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitCheck()">
+                    <i class="fas fa-search me-2"></i>Check Plagiarism
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Batch Check Modal -->
+<div class="modal fade" id="batchModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">📋 Batch Plagiarism Check</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="batchForm">
+                    <div class="mb-3">
+                        <label for="batchAssignment" class="form-label">Assignment</label>
+                        <select class="form-select" id="batchAssignment" required>
+                            <option value="">Select assignment to check...</option>
+                            <!-- Will be populated by JavaScript -->
+                        </select>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        This will check all submissions for the selected assignment for plagiarism.
+                        This may take several minutes depending on the number of submissions.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="submitBatchCheck()">
+                    <i class="fas fa-play me-2"></i>Start Batch Check
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Results Modal -->
+<div class="modal fade" id="resultsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">🔍 Plagiarism Check Results</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="resultsContent"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="downloadResults()">
+                    <i class="fas fa-download me-2"></i>Download Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5>🔍 AI is analyzing content...</h5>
+                <p class="text-muted mb-0">This may take a few moments</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentResults = null;
+
+// Load assignments on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadAssignments();
+    
+    // Add event listeners for view buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('[data-check-id]')) {
+            const checkId = e.target.closest('[data-check-id]').dataset.checkId;
+            viewReport(checkId);
+        }
+    });
+});
+
+function loadAssignments() {
+    fetch('/api/assessments')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            populateAssignmentSelects(data.assessments);
+        }
+    })
+    .catch(error => console.error('Error loading assignments:', error));
+}
+
+function populateAssignmentSelects(assignments) {
+    const selects = ['assignmentSelect', 'checkAssignment', 'batchAssignment'];
+    
+    selects.forEach(selectId => {
+        const select = document.getElementById(selectId);
+        if (select) {
+            // Clear existing options except first
+            select.innerHTML = select.querySelector('option').outerHTML;
+            
+            assignments.forEach(assignment => {
+                const option = document.createElement('option');
+                option.value = assignment.id;
+                option.textContent = assignment.title;
+                select.appendChild(option);
+            });
+        }
+    });
+}
+
+function showCheckModal() {
+    const modal = new bootstrap.Modal(document.getElementById('checkModal'));
+    modal.show();
+}
+
+function showBatchModal() {
+    const modal = new bootstrap.Modal(document.getElementById('batchModal'));
+    modal.show();
+}
+
+function performQuickCheck() {
+    const text = document.getElementById('quickCheckText').value.trim();
+    const assignmentId = document.getElementById('assignmentSelect').value;
+    
+    if (!text) {
+        showAlert('warning', 'Please enter text to check');
+        return;
+    }
+    
+    if (text.length < 50) {
+        showAlert('warning', 'Text must be at least 50 characters long');
+        return;
+    }
+    
+    checkPlagiarism(text, assignmentId, 'quickCheckResults');
+}
+
+function submitCheck() {
+    const text = document.getElementById('checkText').value.trim();
+    const assignmentId = document.getElementById('checkAssignment').value;
+    
+    if (!text) {
+        showAlert('warning', 'Please enter text to check');
+        return;
+    }
+    
+    if (text.length < 50) {
+        showAlert('warning', 'Text must be at least 50 characters long');
+        return;
+    }
+    
+    bootstrap.Modal.getInstance(document.getElementById('checkModal')).hide();
+    checkPlagiarism(text, assignmentId, 'modal');
+}
+
+function checkPlagiarism(text, assignmentId, displayMode) {
+    showLoadingModal();
+    
+    const requestData = {
+        text: text,
+        assignment_id: assignmentId || null
+    };
+    
+    fetch('/plagiarism/check', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoadingModal();
+        if (data.success) {
+            currentResults = data.result;
+            if (displayMode === 'modal') {
+                showResultsModal(data.result);
+            } else {
+                displayResults(data.result, displayMode);
+            }
+        } else {
+            showAlert('danger', 'Error checking plagiarism: ' + data.error);
+        }
+    })
+    .catch(error => {
+        hideLoadingModal();
+        showAlert('danger', 'Error: ' + error.message);
+    });
+}
+
+function submitBatchCheck() {
+    const assignmentId = document.getElementById('batchAssignment').value;
+    
+    if (!assignmentId) {
+        showAlert('warning', 'Please select an assignment');
+        return;
+    }
+    
+    bootstrap.Modal.getInstance(document.getElementById('batchModal')).hide();
+    showLoadingModal();
+    
+    fetch('/plagiarism/batch-check', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+        },
+        body: JSON.stringify({ assignment_id: assignmentId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoadingModal();
+        if (data.success) {
+            showBatchResults(data);
+            showAlert('success', `Batch check completed! Processed ${data.processed} of ${data.total} submissions.`);
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            showAlert('danger', 'Error in batch check: ' + data.error);
+        }
+    })
+    .catch(error => {
+        hideLoadingModal();
+        showAlert('danger', 'Error: ' + error.message);
+    });
+}
+
+function displayResults(result, containerId) {
+    const container = document.getElementById(containerId);
+    
+    let html = `
+        <div class="card border-${getRiskColor(result.risk_level)}">
+            <div class="card-header bg-${getRiskColor(result.risk_level)} text-white">
+                <h6>🔍 Plagiarism Analysis Results</h6>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <h6>Overall Score</h6>
+                        <div class="progress">
+                            <div class="progress-bar bg-${getRiskColor(result.risk_level)}" 
+                                 style="width: ${result.overall_score * 100}%"></div>
+                        </div>
+                        <small>${(result.overall_score * 100).toFixed(1)}%</small>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Risk Level</h6>
+                        <span class="badge bg-${getRiskColor(result.risk_level)} fs-6">
+                            ${result.risk_level.replace('_', ' ').toUpperCase()}
+                        </span>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Matches Found</h6>
+                        <span class="fs-5">${result.database_matches ? result.database_matches.length : 0}</span>
+                    </div>
+                </div>
+    `;
+    
+    // Add database matches
+    if (result.database_matches && result.database_matches.length > 0) {
+        html += `
+            <h6>🗄️ Database Matches</h6>
+            <div class="table-responsive mb-3">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Similarity</th>
+                            <th>User</th>
+                            <th>Date</th>
+                            <th>Severity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        result.database_matches.slice(0, 5).forEach(match => {
+            html += `
+                <tr>
+                    <td>${(match.similarity_score * 100).toFixed(1)}%</td>
+                    <td>User #${match.user_id}</td>
+                    <td>${match.created_at}</td>
+                    <td><span class="badge bg-${getSeverityColor(match.severity)}">${match.severity}</span></td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+    
+    // Add recommendations
+    if (result.recommendations && result.recommendations.length > 0) {
+        html += `
+            <h6>💡 Recommendations</h6>
+            <ul>
+                ${result.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+            </ul>
+        `;
+    }
+    
+    html += `
+            </div>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+    container.style.display = 'block';
+}
+
+function showResultsModal(result) {
+    displayResults(result, 'resultsContent');
+    const modal = new bootstrap.Modal(document.getElementById('resultsModal'));
+    modal.show();
+}
+
+function showBatchResults(data) {
+    let html = `
+        <div class="card">
+            <div class="card-header">
+                <h6>📋 Batch Check Results</h6>
+            </div>
+            <div class="card-body">
+                <p><strong>Processed:</strong> ${data.processed} of ${data.total} submissions</p>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Score</th>
+                                <th>Risk Level</th>
+                                <th>Matches</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+    `;
+    
+    data.results.forEach(result => {
+        html += `
+            <tr>
+                <td>${result.user_email}</td>
+                <td>${result.plagiarism_score ? (result.plagiarism_score * 100).toFixed(1) + '%' : 'N/A'}</td>
+                <td>
+                    ${result.risk_level ? 
+                        `<span class="badge bg-${getRiskColor(result.risk_level)}">${result.risk_level}</span>` : 
+                        'N/A'
+                    }
+                </td>
+                <td>${result.matches_found || 0}</td>
+                <td>
+                    <span class="badge bg-${result.status === 'completed' ? 'success' : 'danger'}">
+                        ${result.status}
+                    </span>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('resultsContent').innerHTML = html;
+    const modal = new bootstrap.Modal(document.getElementById('resultsModal'));
+    modal.show();
+}
+
+function viewReport(checkId) {
+    fetch(`/plagiarism/report/${checkId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Display detailed report
+            showAlert('info', 'Detailed report functionality coming soon');
+        } else {
+            showAlert('danger', 'Error loading report: ' + data.error);
+        }
+    })
+    .catch(error => {
+        showAlert('danger', 'Error: ' + error.message);
+    });
+}
+
+function downloadResults() {
+    if (!currentResults) {
+        showAlert('warning', 'No results to download');
+        return;
+    }
+    
+    const dataStr = JSON.stringify(currentResults, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `plagiarism_report_${new Date().getTime()}.json`;
+    link.click();
+    
+    URL.revokeObjectURL(url);
+}
+
+function getRiskColor(riskLevel) {
+    switch(riskLevel) {
+        case 'very_high': return 'danger';
+        case 'high': return 'danger';
+        case 'medium': return 'warning';
+        case 'low': return 'success';
+        case 'very_low': return 'success';
+        default: return 'secondary';
+    }
+}
+
+function getSeverityColor(severity) {
+    switch(severity) {
+        case 'very_high': return 'danger';
+        case 'high': return 'warning';
+        case 'medium': return 'info';
+        case 'low': return 'success';
+        default: return 'secondary';
+    }
+}
+
+function showLoadingModal() {
+    const modal = new bootstrap.Modal(document.getElementById('loadingModal'));
+    modal.show();
+}
+
+function hideLoadingModal() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('loadingModal'));
+    if (modal) {
+        modal.hide();
+    }
+}
+
+function showAlert(type, message) {
+    // Create alert with platform styling
+    const alertColors = {
+        'success': '#28a745',
+        'warning': '#ffc107', 
+        'danger': '#dc3545',
+        'info': '#17a2b8'
+    };
+    
+    const alertHtml = `
+        <div class="platform-alert" style="
+            background: ${alertColors[type] || '#6c757d'}; 
+            color: white; 
+            padding: 12px 16px; 
+            margin: 10px 0; 
+            border-radius: 8px; 
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        ">
+            <span>${message}</span>
+            <button onclick="this.parentElement.remove()" style="
+                background: none; 
+                border: none; 
+                color: white; 
+                font-size: 18px; 
+                cursor: pointer;
+                padding: 0;
+                margin-left: 10px;
+            ">&times;</button>
+        </div>
+    `;
+    
+    // Insert at the beginning of the main container
+    const container = document.querySelector('main.container') || document.body;
+    container.insertAdjacentHTML('afterbegin', alertHtml);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        const alert = container.querySelector('.platform-alert');
+        if (alert) {
+            alert.remove();
+        }
+    }, 5000);
+}
+</script>
+
+<!-- Bootstrap JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<style>
+.progress {
+    height: 20px;
+}
+
+.card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.table th {
+    border-top: none;
+}
+
+.text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Badge styles for plagiarism scores and risk levels */
+.score-badge, .risk-badge {
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.score-high, .risk-very-high, .risk-high {
+    background: #dc3545;
+}
+
+.score-medium, .risk-medium {
+    background: #ffc107;
+    color: #000;
+}
+
+.score-low, .risk-low {
+    background: #28a745;
+}
+</style>
+{% endblock %}

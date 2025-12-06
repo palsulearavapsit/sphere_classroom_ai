@@ -1,0 +1,547 @@
+{% extends "base.html" %}
+
+{% block title %}Content Generation - AI Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+.content-modal-body {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+.content-display {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border: 1px solid #e3e6f0;
+    border-radius: 8px;
+    padding: 20px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.copy-success {
+    animation: pulse 0.5s;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.modal-content {
+    z-index: 1060;
+}
+
+.modal button {
+    z-index: 1061;
+    position: relative;
+    pointer-events: auto;
+}
+
+#copyBtn, .modal-footer button {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+}
+
+.modal-content {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    z-index: 1055;
+}
+
+.modal-backdrop {
+    z-index: 1050;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal {
+    z-index: 1055;
+}
+
+.modal button {
+    z-index: 1061;
+    position: relative;
+    pointer-events: auto;
+}
+
+.modal-header {
+    border-bottom: 1px solid #e3e6f0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.modal-header .btn-close {
+    filter: invert(1);
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: white;
+    opacity: 0.8;
+}
+
+.modal-header .btn-close:hover {
+    opacity: 1;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center">
+    <h1 class="h3 mb-0 text-gray-800">
+        <i class="fas fa-robot text-primary"></i>
+        Smart Content Generation
+    </h1>
+    <div class="btn-group">
+        <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+            <i class="fas fa-plus"></i> New Content
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#generateQuiz" data-bs-toggle="modal"><i class="fas fa-question"></i> Generate Quiz</a></li>
+            <li><a class="dropdown-item" href="#generateStudyGuide" data-bs-toggle="modal"><i class="fas fa-book"></i> Study Guide</a></li>
+            <li><a class="dropdown-item" href="#generateSummary" data-bs-toggle="modal"><i class="fas fa-compress"></i> Summarize Text</a></li>
+        </ul>
+    </div>
+</div>
+<div class="row">
+    <!-- Features Overview -->
+    <div class="col-12 mb-4">
+        <div class="alert alert-info">
+            <h5><i class="fas fa-lightbulb"></i> AI Content Generation Features</h5>
+            <div class="row">
+                <div class="col-md-4">
+                    <strong>📝 Quiz Generation:</strong> Auto-create quizzes from PDFs or text
+                </div>
+                <div class="col-md-4">
+                    <strong>📚 Study Guides:</strong> Generate comprehensive study materials
+                </div>
+                <div class="col-md-4">
+                    <strong>📄 Summaries:</strong> Create concise summaries of long content
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-upload"></i> Upload & Generate
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="contentGenerationForm" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label for="contentFile" class="form-label">Upload Document (PDF, DOCX, TXT)</label>
+                        <input type="file" class="form-control" id="contentFile" name="file" 
+                               accept=".pdf,.docx,.txt" required>
+                        <div class="form-text">Supported formats: PDF, Word documents, plain text</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="contentType" class="form-label">Content Type to Generate</label>
+                        <select class="form-select" id="contentType" name="content_type" required>
+                            <option value="">Select content type...</option>
+                            <option value="quiz">📝 Multiple Choice Quiz</option>
+                            <option value="study_guide">📚 Study Guide</option>
+                            <option value="summary">📄 Summary</option>
+                            <option value="flashcards">🃏 Flashcards</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="difficulty" class="form-label">Difficulty Level</label>
+                        <select class="form-select" id="difficulty" name="difficulty">
+                            <option value="beginner">🟢 Beginner</option>
+                            <option value="intermediate" selected>🟡 Intermediate</option>
+                            <option value="advanced">🔴 Advanced</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3" id="questionCount" style="display: none;">
+                        <label for="numQuestions" class="form-label">Number of Questions</label>
+                        <input type="number" class="form-control" id="numQuestions" name="num_questions" 
+                               min="5" max="50" value="10">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-magic"></i> Generate Content
+                    </button>
+                </form>
+                
+                <div id="generationResult" class="mt-4" style="display: none;">
+                    <div class="card shadow border-primary">
+                        <div class="card-header py-3 d-flex justify-content-between align-items-center bg-primary text-white">
+                            <h6 class="m-0 font-weight-bold">
+                                <i class="fas fa-robot"></i> Your Generated Quiz
+                            </h6>
+                            <button type="button" class="btn btn-light btn-sm" id="copyAllBtn" onclick="copyToClipboard()" style="display: none;">
+                                <i class="fas fa-copy"></i> Copy All
+                            </button>
+                        </div>
+                        <div class="card-body bg-light">
+                            <div class="alert alert-info mb-3">
+                                <i class="fas fa-info-circle"></i> <strong>Your quiz is ready!</strong> Scroll down to see the full content if needed.
+                            </div>
+                            <div id="resultContent" style="max-height: 500px; overflow-y: auto; border: 2px solid #007bff; border-radius: 5px; background-color: white; padding: 10px;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="generationProgress" class="mt-4" style="display: none;">
+                    <div class="alert alert-info">
+                        <i class="fas fa-spinner fa-spin"></i> Generating content with AI...
+                        <div class="progress mt-2">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 100%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Statistics -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-chart-pie"></i> AI Usage Stats
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row no-gutters align-items-center mb-3">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Content Generated This Month
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">24</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-robot fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+                
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Processing Time Saved
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">12.5 hours</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clock fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Text Input Modal -->
+<div class="modal fade" id="generateQuiz" tabindex="-1" aria-labelledby="generateQuizLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="generateQuizLabel">
+                    <i class="fas fa-question"></i> Generate Quiz from Text
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="textQuizForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label for="quizText" class="form-label">Paste your text content:</label>
+                        <textarea class="form-control" id="quizText" name="text" rows="10" 
+                                  placeholder="Paste the content you want to generate quiz questions from..."></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="quizQuestions" class="form-label">Number of Questions</label>
+                            <input type="number" class="form-control" id="quizQuestions" name="questions" 
+                                   min="5" max="25" value="10">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="quizDifficulty" class="form-label">Difficulty</label>
+                            <select class="form-select" id="quizDifficulty" name="difficulty">
+                                <option value="beginner">Beginner</option>
+                                <option value="intermediate" selected>Intermediate</option>
+                                <option value="advanced">Advanced</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="generateFromText('quiz')">
+                    <i class="fas fa-magic"></i> Generate Quiz
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('contentType').addEventListener('change', function() {
+    const questionCount = document.getElementById('questionCount');
+    if (this.value === 'quiz') {
+        questionCount.style.display = 'block';
+    } else {
+        questionCount.style.display = 'none';
+    }
+});
+
+document.getElementById('contentGenerationForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const progressDiv = document.getElementById('generationProgress');
+    const resultDiv = document.getElementById('generationResult');
+    
+    // Show progress
+    progressDiv.style.display = 'block';
+    resultDiv.style.display = 'none';
+    
+    fetch('/content/generate', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        progressDiv.style.display = 'none';
+        
+        console.log('Received data from server:', data);
+        console.log('Content length:', data.content ? data.content.length : 'undefined');
+        console.log('Content preview:', data.content ? data.content.substring(0, 100) : 'no content');
+        
+        if (data.success) {
+            // Format content for better display
+            let formattedContent = data.content;
+            try {
+                // Try to parse as JSON for better formatting
+                const parsedContent = JSON.parse(data.content);
+                formattedContent = JSON.stringify(parsedContent, null, 2);
+            } catch (e) {
+                // If not JSON, use as is
+                formattedContent = data.content;
+            }
+            
+            // Display content in inline section with better formatting
+            document.getElementById('resultContent').innerHTML = '<pre style="white-space: pre-wrap; background-color: white; padding: 20px; border-radius: 5px; font-size: 14px; line-height: 1.6; color: #333;">' + escapeHtml(formattedContent) + '</pre>';
+            document.getElementById('copyAllBtn').style.display = 'inline-block';
+            
+            // Update header with content preview
+            const headerTitle = resultDiv.querySelector('.card-header h6');
+            const contentPreview = formattedContent.substring(0, 60) + (formattedContent.length > 60 ? '...' : '');
+            headerTitle.innerHTML = '<i class="fas fa-check-circle"></i> ' + escapeHtml(contentPreview);
+            
+            // Show the result with visual emphasis
+            resultDiv.style.display = 'block';
+            
+            // Add a flash effect to make it obvious
+            resultDiv.style.border = '3px solid #28a745';
+            setTimeout(() => {
+                resultDiv.style.border = 'none';
+            }, 3000);
+            
+            // Scroll to results with some delay to ensure rendering
+            setTimeout(() => {
+                resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+            
+            console.log('Quiz generated successfully! Content length:', formattedContent.length);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        progressDiv.style.display = 'none';
+        console.error('Error:', error);
+        alert('Failed to generate content. Please try again.');
+    });
+});
+
+function generateFromText(type) {
+    const modal = document.getElementById('generateQuiz');
+    const text = document.getElementById('quizText').value;
+    const questions = document.getElementById('quizQuestions').value;
+    const difficulty = document.getElementById('quizDifficulty').value;
+    
+    if (!text.trim()) {
+        alert('Please enter some text to generate content from.');
+        return;
+    }
+    
+    // Close modal
+    const modalInstance = bootstrap.Modal.getInstance(modal);
+    modalInstance.hide();
+    
+    // Show progress
+    const progressDiv = document.getElementById('generationProgress');
+    const resultDiv = document.getElementById('generationResult');
+    progressDiv.style.display = 'block';
+    resultDiv.style.display = 'none';
+    
+    // Submit to backend
+    fetch('/content/generate-text', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+        },
+        body: JSON.stringify({
+            text: text,
+            content_type: type,
+            num_questions: questions,
+            difficulty: difficulty
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        progressDiv.style.display = 'none';
+        
+        if (data.success) {
+            // Format content for better display
+            let formattedContent = data.content;
+            try {
+                // Try to parse as JSON for better formatting
+                const parsedContent = JSON.parse(data.content);
+                formattedContent = JSON.stringify(parsedContent, null, 2);
+            } catch (e) {
+                // If not JSON, use as is
+                formattedContent = data.content;
+            }
+            
+            // Display content in inline section
+            document.getElementById('resultContent').innerHTML = '<pre style="white-space: pre-wrap; background-color: #f8f9fa; padding: 15px; border-radius: 5px; border: 1px solid #dee2e6;">' + escapeHtml(formattedContent) + '</pre>';
+            document.getElementById('copyAllBtn').style.display = 'inline-block';
+            
+            // Update header with content preview
+            const headerTitle = resultDiv.querySelector('.card-header h6');
+            const contentPreview = formattedContent.substring(0, 80) + (formattedContent.length > 80 ? '...' : '');
+            headerTitle.innerHTML = '<i class="fas fa-robot"></i> ' + escapeHtml(contentPreview);
+            
+            resultDiv.style.display = 'block';
+            
+            // Scroll to results
+            resultDiv.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        progressDiv.style.display = 'none';
+        console.error('Error:', error);
+        alert('Failed to generate content. Please try again.');
+    });
+}
+
+// Copy content to clipboard
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        // Update button text temporarily
+        const btn = document.getElementById('copyBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-success', 'copy-success');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.remove('btn-success', 'copy-success');
+            btn.classList.add('btn-primary');
+        }, 2000);
+    }, function(err) {
+        console.error('Could not copy text: ', err);
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            const btn = document.getElementById('copyBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-success', 'copy-success');
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.classList.remove('btn-success', 'copy-success');
+                btn.classList.add('btn-primary');
+            }, 2000);
+        } catch (fallbackErr) {
+            alert('Failed to copy content. Please select and copy manually.');
+        }
+        document.body.removeChild(textArea);
+    });
+}
+
+// Show existing content in modal
+function showContentInModal() {
+    const content = document.getElementById('resultContent').innerText;
+    if (content) {
+        // Format content for better display
+        let formattedContent = content;
+        try {
+            // Try to parse as JSON for better formatting
+            const parsedContent = JSON.parse(content);
+            formattedContent = JSON.stringify(parsedContent, null, 2);
+        } catch (e) {
+            // If not JSON, use as is
+            formattedContent = content;
+        }
+        
+        document.getElementById('modalContent').textContent = formattedContent;
+        
+        // Show the modal with error handling
+        try {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const contentModal = new bootstrap.Modal(document.getElementById('contentModal'));
+                contentModal.show();
+            } else {
+                console.warn('Bootstrap not available, using fallback');
+                alert('Content:\n\n' + formattedContent.substring(0, 500) + (formattedContent.length > 500 ? '...' : ''));
+            }
+        } catch (e) {
+            console.error('Modal display failed:', e);
+            alert('Content:\n\n' + formattedContent.substring(0, 500) + (formattedContent.length > 500 ? '...' : ''));
+        }
+    }
+}
+</script>
+
+<script>
+// HTML escape function for security
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Copy to clipboard function
+function copyToClipboard() {
+    const content = document.getElementById('resultContent').textContent;
+    if (content) {
+        navigator.clipboard.writeText(content).then(function() {
+            // Show success feedback
+            const btn = document.getElementById('copyAllBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-success');
+            
+            setTimeout(function() {
+                btn.innerHTML = originalText;
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-primary');
+            }, 2000);
+        }).catch(function(err) {
+            console.error('Could not copy text: ', err);
+            alert('Failed to copy to clipboard');
+        });
+    }
+}
+</script>
+
+{% endblock %}

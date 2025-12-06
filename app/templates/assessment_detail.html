@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2 class="h2">{{ test.title }}</h2>
+  
+  {% if test.content.type == 'pdf' %}
+  <!-- PDF Assessment Display -->
+  <div class="card" style="padding: 15px; background-color: #f8f9fa;">
+    <h3>📄 PDF Assessment</h3>
+    {% if test.content.description %}
+    <p><strong>Description:</strong> {{ test.content.description }}</p>
+    {% endif %}
+    <p><strong>Original File:</strong> {{ test.content.original_filename }}</p>
+    
+    <div style="margin: 20px 0; text-align: center; padding: 30px; background-color: #f8f9fa; border-radius: 8px; border: 2px dashed #dee2e6;">
+      <div style="margin-bottom: 20px;">
+        <i class="fas fa-file-pdf" style="font-size: 4em; color: #dc3545; margin-bottom: 15px;"></i>
+        <h3 style="margin: 0 0 10px 0; color: #495057;">PDF Assessment Ready</h3>
+        <p style="margin: 0; color: #6c757d;">Click the button below to open the assessment in a new tab.</p>
+      </div>
+      
+      <a href="/assessments/pdf/{{ test.content.filename }}" target="_blank" class="btn btn-primary btn-lg">
+        📖 Open PDF Assessment in New Tab
+      </a>
+      
+      <div style="margin-top: 15px;">
+        <small class="muted">
+          The PDF will open in a new browser tab. Complete the assessment and return here to submit your answers.
+        </small>
+      </div>
+    </div>
+    
+    {% if current_user.role == 'student' %}
+    <div class="card" style="margin-top: 20px; padding: 15px;">
+      <h4>Submit Your Answers</h4>
+      <textarea id="student-answers" placeholder="Enter your answers here..." rows="6" style="width: 100%; margin-bottom: 10px;"></textarea>
+      <button class="btn btn-primary" id="submit-pdf-btn" data-test-id="{{ test.id }}">Submit Answers</button>
+      <div id="pdf-score" class="mt-2"></div>
+    </div>
+    {% endif %}
+  </div>
+  
+  {% else %}
+  <!-- Traditional Quiz Questions -->
+  <div id="assessment" data-testid="{{ test.id }}">
+    {% for q in test.content.questions %}
+      <div class="q">
+        <p>{{ loop.index }}. {{ q.q }}</p>
+        {% for opt in q.options %}
+        <label class="opt"><input type="radio" name="q{{ loop.parent.index0 }}" value="{{ opt }}"> {{ opt }}</label>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+  <button class="btn btn-primary" id="submit-assessment-btn" data-test-id="{{ test.id }}">Submit</button>
+  {% endif %}
+  
+  <div id="score" class="mt-2"></div>
+</section>
+
+<script>
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+  // PDF submission button
+  const pdfSubmitBtn = document.getElementById('submit-pdf-btn');
+  if (pdfSubmitBtn) {
+    pdfSubmitBtn.addEventListener('click', function() {
+      const testId = this.getAttribute('data-test-id');
+      submitPDFAssessment(testId);
+    });
+  }
+  
+  // Regular assessment submission button
+  const assessmentBtn = document.getElementById('submit-assessment-btn');
+  if (assessmentBtn) {
+    assessmentBtn.addEventListener('click', function() {
+      const testId = this.getAttribute('data-test-id');
+      submitAssessment(testId);
+    });
+  }
+});
+
+async function submitPDFAssessment(testId) {
+  const answers = document.getElementById("student-answers").value.trim()
+  if (!answers) {
+    alert("Please enter your answers before submitting.")
+    return
+  }
+  
+  try {
+    const r = await fetch(`/assessments/submit/${testId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCSRFToken()
+      },
+      body: JSON.stringify({ answers: [answers] })
+    })
+    
+    const result = await r.json()
+    const scoreDiv = document.getElementById("pdf-score")
+    scoreDiv.innerHTML = `<div style="color: green; margin-top: 10px;">✅ Answers submitted successfully!</div>`
+    
+    // Disable submit button
+    document.getElementById('submit-pdf-btn').disabled = true
+    document.getElementById('submit-pdf-btn').innerText = "Submitted"
+  } catch (error) {
+    const scoreDiv = document.getElementById("pdf-score")
+    scoreDiv.innerHTML = `<div style="color: red; margin-top: 10px;">❌ Error submitting answers: ${error.message}</div>`
+  }
+}
+
+async function submitAssessment(testId) {
+  const answers = []
+  const questions = document.querySelectorAll('.q')
+  
+  questions.forEach((q, i) => {
+    const selected = q.querySelector(`input[name="q${i}"]:checked`)
+    answers.push(selected ? selected.value : "")
+  })
+  
+  try {
+    const r = await fetch(`/assessments/submit/${testId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCSRFToken()
+      },
+      body: JSON.stringify({ answers })
+    })
+    
+    const result = await r.json()
+    document.getElementById("score").innerHTML = `<div style="color: green; margin-top: 10px;">✅ Score: ${result.score?.toFixed(1) || 0}%</div>`
+    
+    // Disable submit button
+    document.getElementById('submit-assessment-btn').disabled = true
+    document.getElementById('submit-assessment-btn').innerText = "Submitted"
+  } catch (error) {
+    document.getElementById("score").innerHTML = `<div style="color: red; margin-top: 10px;">❌ Error submitting answers: ${error.message}</div>`
+  }
+}
+
+// Helper function for CSRF token
+function getCSRFToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]')
+  if (meta) return meta.getAttribute('content')
+  const cookies = document.cookie.split(';')
+  for (let cookie of cookies) {
+    const [name, value] = cookie.trim().split('=')
+    if (name === 'csrf_token') return value
+  }
+  return ''
+}
+</script>
+{% endblock %}

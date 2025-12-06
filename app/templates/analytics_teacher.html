@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2 class="h2">📊 Teacher Analytics Dashboard</h2>
+  <p class="lead">Track your students' performance and classroom engagement</p>
+  
+  <div class="grid-2 gap-3">
+    <!-- Classroom Performance -->
+    <div class="card">
+      <h3 class="h3">📚 Classroom Performance</h3>
+      <div id="classroom-performance-chart" style="height: 400px;"></div>
+      <button class="btn" onclick="loadChart('classroom_performance')">Refresh Data</button>
+    </div>
+    
+    <!-- Student Progress -->
+    <div class="card">
+      <h3 class="h3">👥 Student Progress</h3>
+      <div id="student-progress-chart" style="height: 400px;"></div>
+      <button class="btn" onclick="loadChart('student_progress')">Refresh Data</button>
+    </div>
+  </div>
+  
+  <div class="grid-3 gap-3" style="margin-top: 20px;">
+    <!-- Assessment Results -->
+    <div class="card">
+      <h3 class="h3">📝 Assessment Results</h3>
+      <div id="assessment-results-chart" style="height: 300px;"></div>
+      <button class="btn" onclick="loadChart('assessment_results')">View Results</button>
+    </div>
+    
+    <!-- Class Statistics -->
+    <div class="card">
+      <h3 class="h3">📈 Class Statistics</h3>
+      <div id="class-stats">
+        <div class="stat-item">
+          <strong>Total Students:</strong> <span id="total-class-students">-</span>
+        </div>
+        <div class="stat-item">
+          <strong>Active Assignments:</strong> <span id="active-assignments">-</span>
+        </div>
+        <div class="stat-item">
+          <strong>Class Average:</strong> <span id="class-average">-</span>%
+        </div>
+        <div class="stat-item">
+          <strong>Completion Rate:</strong> <span id="completion-rate">-</span>%
+        </div>
+      </div>
+      <button class="btn" onclick="loadTeacherStats()">Update Stats</button>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="card">
+      <h3 class="h3">⚡ Quick Actions</h3>
+      <div class="grid-1 gap-2">
+        <button class="btn btn-primary" onclick="exportClassData()">📊 Export Class Data</button>
+        <button class="btn" onclick="generateProgressReport()">📋 Progress Report</button>
+        <button class="btn" onclick="viewDetailedAnalytics()">🔍 Detailed Analytics</button>
+        <a href="/assessments/" class="btn">📝 Create Assessment</a>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Student List with Performance -->
+  <div class="card" style="margin-top: 20px;">
+    <h3 class="h3">👥 Student Performance Overview</h3>
+    <div id="student-performance-table">
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background-color: #f8f9fa;">
+            <th style="padding: 10px; text-align: left;">Student</th>
+            <th style="padding: 10px; text-align: center;">Assignments Completed</th>
+            <th style="padding: 10px; text-align: center;">Average Score</th>
+            <th style="padding: 10px; text-align: center;">Participation</th>
+            <th style="padding: 10px; text-align: center;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="student-performance-body">
+          <tr>
+            <td colspan="5" style="padding: 20px; text-align: center; color: #666;">
+              Click "Load Student Data" to view performance details
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <button class="btn" onclick="loadStudentPerformance()">Load Student Data</button>
+  </div>
+</section>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+// Teacher Analytics JavaScript Functions
+
+function loadChart(chartType) {
+  console.log(`Loading chart: ${chartType}`);
+  
+  // Mock data for demonstration
+  const mockData = {
+    classroom_performance: {
+      x: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+      y: [75, 82, 78, 85],
+      type: 'scatter',
+      mode: 'lines+markers',
+      name: 'Class Average'
+    },
+    student_progress: {
+      x: ['Assignment 1', 'Assignment 2', 'Assignment 3', 'Assignment 4'],
+      y: [68, 75, 82, 79],
+      type: 'bar',
+      name: 'Average Scores'
+    },
+    assessment_results: {
+      x: ['Quiz 1', 'Quiz 2', 'Project', 'Final'],
+      y: [85, 78, 92, 88],
+      type: 'bar',
+      marker: {color: '#2563eb'},
+      name: 'Assessment Scores'
+    }
+  };
+  
+  const data = [mockData[chartType]];
+  const layout = {
+    title: chartType.replace('_', ' ').toUpperCase(),
+    xaxis: { title: 'Time/Assessment' },
+    yaxis: { title: 'Score (%)' },
+    template: 'plotly_dark'
+  };
+  
+  const chartId = chartType.replace('_', '-') + '-chart';
+  Plotly.newPlot(chartId, data, layout);
+}
+
+function loadTeacherStats() {
+  // Mock stats for demonstration
+  document.getElementById('total-class-students').textContent = '24';
+  document.getElementById('active-assignments').textContent = '3';
+  document.getElementById('class-average').textContent = '82';
+  document.getElementById('completion-rate').textContent = '91';
+}
+
+function loadStudentPerformance() {
+  const tbody = document.getElementById('student-performance-body');
+  
+  // Mock student data
+  const students = [
+    {name: 'Alice Johnson', completed: '5/5', average: '92%', participation: 'High'},
+    {name: 'Bob Smith', completed: '4/5', average: '85%', participation: 'Medium'},
+    {name: 'Carol Davis', completed: '5/5', average: '88%', participation: 'High'},
+    {name: 'David Wilson', completed: '3/5', average: '76%', participation: 'Low'}
+  ];
+  
+  tbody.innerHTML = students.map(student => `
+    <tr>
+      <td style="padding: 10px;">${student.name}</td>
+      <td style="padding: 10px; text-align: center;">${student.completed}</td>
+      <td style="padding: 10px; text-align: center;">${student.average}</td>
+      <td style="padding: 10px; text-align: center;">${student.participation}</td>
+      <td style="padding: 10px; text-align: center;">
+        <button class="btn btn-small">View Details</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function exportClassData() {
+  alert('Class data export feature - would download CSV/JSON file');
+}
+
+function generateProgressReport() {
+  alert('Progress report generation feature - would create detailed report');
+}
+
+function viewDetailedAnalytics() {
+  alert('Detailed analytics feature - would show comprehensive analysis');
+}
+
+// Load initial data
+document.addEventListener('DOMContentLoaded', function() {
+  loadChart('classroom_performance');
+  loadChart('student_progress');
+  loadChart('assessment_results');
+  loadTeacherStats();
+});
+</script>
+
+<style>
+.stat-item {
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+.stat-item:last-child {
+  border-bottom: none;
+}
+.btn-small {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+table {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+}
+th, td {
+  border-bottom: 1px solid #eee;
+}
+tr:hover {
+  background-color: #f8f9fa;
+}
+</style>
+{% endblock %}

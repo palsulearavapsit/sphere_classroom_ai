@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero slide-up">
+  <h1 class="h1">Admin Dashboard</h1>
+  <p class="lead text-pretty">Full platform administration and management tools.</p>
+  
+  <h3 class="h3 mt-3">👥 User Management</h3>
+  <div class="grid-2 gap-3">
+    <a class="card link" href="/admin/">
+      <h4>👤 User Management</h4>
+      <p>Manage users, roles, and permissions</p>
+    </a>
+    <a class="card link" href="/mysql/">
+      <h4>🗄️ Database Management</h4>
+      <p>Direct database access and management</p>
+    </a>
+  </div>
+  
+  <h3 class="h3 mt-3">🎓 Educational Content</h3>
+  <div class="grid-3 gap-3">
+    <a class="card link" href="/classrooms/">
+      <h4>📚 All Classrooms</h4>
+      <p>Oversee all platform classrooms</p>
+    </a>
+    <a class="card link" href="/assessments/">
+      <h4>📝 All Assessments</h4>
+      <p>Manage platform-wide assessments</p>
+    </a>
+    <a class="card link" href="/content/">
+      <h4>✨ Content Generation</h4>
+      <p>AI-powered content creation tools</p>
+    </a>
+  </div>
+  
+  <h3 class="h3 mt-3">🤖 AI Administration</h3>
+  <div class="grid-4 gap-3">
+    <a class="card link" href="/grading/">
+      <h4>🤖 AI Grading System</h4>
+      <p>Monitor and manage automated grading</p>
+    </a>
+    <a class="card link" href="/plagiarism/">
+      <h4>🔍 Plagiarism Detection</h4>
+      <p>Platform-wide plagiarism monitoring</p>
+    </a>
+    <a class="card link" href="/image-analysis/">
+      <h4>📸 Image Analysis</h4>
+      <p>AI-powered image and document analysis</p>
+    </a>
+    <a class="card link" href="/tutor/">
+      <h4>🧠 AI Tutor System</h4>
+      <p>Monitor AI tutoring interactions</p>
+    </a>
+  </div>
+  
+  <h3 class="h3 mt-3">🔧 Technical Tools</h3>
+  <div class="grid-3 gap-3">
+    <a class="card link" href="/ocr/">
+      <h4>🔍 OCR Management</h4>
+      <p>Document processing and text extraction</p>
+    </a>
+    <a class="card link" href="/data/">
+      <h4>📊 Data Management</h4>
+      <p>Platform data analysis and export</p>
+    </a>
+    <a class="card link" href="/api/">
+      <h4>🔌 API Management</h4>
+      <p>API endpoints and integration tools</p>
+    </a>
+  </div>
+</section>
+{% endblock %}

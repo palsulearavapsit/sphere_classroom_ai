@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="h2">OCR Extraction</h2>
+    <a href="{{ url_for('ocr.view_extractions') }}" class="btn btn-outline-primary">
+      <i class="fas fa-file-text"></i> View All Extractions
+    </a>
+  </div>
+  
+  <div class="alert alert-info mb-4">
+    <i class="fas fa-info-circle"></i>
+    <strong>Enhanced OCR Support:</strong> Upload images (JPG, PNG) or PDF files to extract text using OCR. 
+    For PDFs, the system will try direct text extraction first, then fallback to OCR for scanned documents. 
+    The extracted text will be automatically stored and made available to the AI tutor for enhanced, context-aware responses.
+  </div>
+  
+  <form class="grid-1 gap-2" onsubmit="return false">
+    <div class="mb-3">
+      <label for="ocr-file" class="form-label">Select Image or PDF File</label>
+      <input type="file" id="ocr-file" accept=".jpg,.jpeg,.png,.pdf" class="form-control">
+      <div class="form-text">Supported formats: JPG, PNG, PDF</div>
+    </div>
+    <button class="btn btn-primary" onclick="uploadOCR()">
+      <i class="fas fa-camera"></i> Upload & Extract Text
+    </button>
+  </form>
+  <pre id="ocr-out" class="mt-3" style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; max-height: 400px; overflow-y: auto;"></pre>
+</section>
+
+<script>
+function uploadOCR() {
+  const file = document.getElementById('ocr-file').files[0];
+  if (!file) {
+    alert('Please select an image or PDF file');
+    return;
+  }
+  
+  const out = document.getElementById('ocr-out');
+  const fileType = file.type.toLowerCase();
+  const fileName = file.name.toLowerCase();
+  
+  if (fileName.endsWith('.pdf')) {
+    out.textContent = 'Processing PDF... This may take a moment for multi-page documents.';
+  } else {
+    out.textContent = 'Extracting text from image...';
+  }
+  
+  const formData = new FormData();
+  formData.append('image', file);
+  
+  fetch('/ocr/upload', {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.error) {
+      out.textContent = 'Error: ' + data.error;
+      return;
+    }
+    
+    const fileTypeInfo = data.file_type || 'Unknown';
+    const structInfo = data.struct || {};
+    
+    let statusInfo = `✅ Text extracted and stored in database for AI tutor context\n`;
+    statusInfo += `📁 File Type: ${fileTypeInfo}\n`;
+    
+    if (structInfo.pages) {
+      statusInfo += `📄 Pages Processed: ${structInfo.pages}\n`;
+    }
+    if (structInfo.method) {
+      statusInfo += `🔧 Extraction Method: ${structInfo.method}\n`;
+    }
+    if (structInfo.lines && structInfo.lines.length) {
+      statusInfo += `📝 Lines Extracted: ${structInfo.lines.length}\n`;
+    }
+    
+    out.innerHTML = `<strong>Extracted Text:</strong>\n${data.text}\n\n<strong>Status:</strong>\n${statusInfo}`;
+    
+    // Show success message
+    const successDiv = document.createElement('div');
+    successDiv.className = 'alert alert-success mt-3';
+    
+    let successMessage = `
+      <i class="fas fa-check-circle"></i>
+      <strong>Success!</strong> Text extracted from ${fileTypeInfo.toLowerCase()} and saved. The AI tutor can now use this content to provide enhanced answers.
+      <br>
+    `;
+    
+    if (fileTypeInfo === 'PDF' && structInfo.method) {
+      successMessage += `<small>📋 Used ${structInfo.method} for text extraction.</small><br>`;
+    }
+    
+    successMessage += `
+      <a href="/tutor/" class="btn btn-sm btn-success mt-2">
+        <i class="fas fa-graduation-cap"></i> Chat with AI Tutor
+      </a>
+      <a href="/ocr/extractions" class="btn btn-sm btn-info mt-2 ms-2">
+        <i class="fas fa-file-text"></i> View All Extractions
+      </a>
+    `;
+    
+    successDiv.innerHTML = successMessage;
+    
+    // Remove any existing success message
+    const existingSuccess = document.querySelector('.alert-success');
+    if (existingSuccess) {
+      existingSuccess.remove();
+    }
+    
+    out.parentNode.appendChild(successDiv);
+  })
+  .catch(error => {
+    console.error('Upload error:', error);
+    out.textContent = 'Upload failed: ' + error.message;
+  });
+}
+</script>
+{% endblock %}

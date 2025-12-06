@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero slide-up">
+  <h1 class="h1">Welcome Student</h1>
+  <p class="lead text-pretty">Access your classrooms, assessments, and your AI tutor.</p>
+  
+  <!-- My Classes Section -->
+  <h3 class="h3 mt-3">📚 My Classes</h3>
+  <div class="card" style="margin-bottom: 20px;">
+    {% if classrooms %}
+      <div class="grid-2 gap-3">
+        {% for classroom in classrooms %}
+        <div class="card" style="padding: 15px; border-left: 4px solid #007bff;">
+          <h4 style="margin: 0 0 8px 0; color: #007bff;">{{ classroom.name }}</h4>
+          <p style="margin: 0; color: #666; font-size: 0.9em;">
+            <span style="font-family: monospace; background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">{{ classroom.join_code }}</span>
+          </p>
+          <a href="/classrooms/{{ classroom.id }}" class="btn btn-sm btn-outline-primary" style="margin-top: 10px;">View Classroom</a>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 30px; color: #666;">
+        <i class="fas fa-graduation-cap" style="font-size: 3em; margin-bottom: 15px; opacity: 0.3;"></i>
+        <p>You haven't joined any classrooms yet.</p>
+        <a href="/classrooms/" class="btn btn-primary">Join a Classroom</a>
+      </div>
+    {% endif %}
+  </div>
+  
+  <h3 class="h3 mt-3">Quick Actions</h3>
+  <div class="grid-3 gap-3">
+    <a class="card link" href="/classrooms/">
+      <h4>📚 My Classrooms</h4>
+      <p>Join classes and participate in discussions</p>
+    </a>
+    <a class="card link" href="/assessments/">
+      <h4>📝 Assessments</h4>
+      <p>View and complete your assignments</p>
+    </a>
+    <a class="card link" href="/tutor/">
+      <h4>🧠 AI Tutor</h4>
+      <p>Get personalized learning assistance</p>
+    </a>
+  </div>
+  
+  <h3 class="h3 mt-3">Learning Tools</h3>
+  <div class="grid-3 gap-3">
+    <a class="card link" href="/content/">
+      <h4>✨ Study Tools</h4>
+      <p>Generate quizzes, flashcards, and study guides</p>
+    </a>
+    <a class="card link" href="/notifications/live-chat">
+      <h4>💬 Live Chat</h4>
+      <p>Connect with classmates and teachers</p>
+    </a>
+    <a class="card link" href="/ocr/">
+      <h4>🔍 Text Extractor</h4>
+      <p>Extract text from images and documents</p>
+    </a>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2 class="h2">Data Analysis</h2>
+  <p class="muted">Run curve fitting, error propagation, or quick summary.</p>
+  <div class="grid-3 gap-3">
+    <div class="panel">
+      <h3 class="h3">Linear Fit</h3>
+      <textarea id="fit-x" rows="3" placeholder="x values, comma-separated"></textarea>
+      <textarea id="fit-y" rows="3" placeholder="y values, comma-separated"></textarea>
+      <button class="btn" onclick="linearFit()">Fit</button>
+      <pre id="fit-out"></pre>
+    </div>
+    <div class="panel">
+      <h3 class="h3">Error Propagation</h3>
+      <input id="formula" placeholder="m*a">
+      <textarea id="values" rows="3" placeholder='{"m":1.0,"a":2.0}'></textarea>
+      <textarea id="errors" rows="3" placeholder='{"m":0.1,"a":0.2}'></textarea>
+      <button class="btn" onclick="propagate()">Compute</button>
+      <pre id="prop-out"></pre>
+    </div>
+    <div class="panel">
+      <h3 class="h3">Analyze Data</h3>
+      <textarea id="arr" rows="3" placeholder="numbers..."></textarea>
+      <button class="btn" onclick="analyze()">Analyze</button>
+      <pre id="ana-out"></pre>
+    </div>
+  </div>
+</section>
+{% endblock %}

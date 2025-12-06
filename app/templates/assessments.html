@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2 class="h2">Assessments & Tests</h2>
+  
+  {% if current_user.role in ['teacher', 'admin'] %}
+  <div class="card" style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa;">
+    <h3 class="h3">📄 Upload PDF Assessment</h3>
+    <form id="pdf-upload-form" enctype="multipart/form-data">
+      <div class="grid-2 gap-3">
+        <div>
+          <label>Assessment Title *</label>
+          <input type="text" id="assessment-title" name="title" placeholder="e.g. Math Quiz Chapter 5" required style="margin-bottom: 10px;">
+          
+          <label>Description</label>
+          <textarea id="assessment-description" name="description" placeholder="Brief description of the assessment..." rows="3" style="margin-bottom: 10px;"></textarea>
+          
+          <label>Assign to Classroom *</label>
+          <select id="classroom-select" name="classroom_id" required style="margin-bottom: 10px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+            <option value="">Select a classroom...</option>
+            {% for classroom in classrooms %}
+            <option value="{{ classroom.id }}">{{ classroom.name }} ({{ classroom.join_code }})</option>
+            {% endfor %}
+          </select>
+          <small class="muted">Choose which classroom will receive this assessment</small>
+        </div>
+        <div>
+          <label>PDF File *</label>
+          <input type="file" id="pdf-file" name="pdf_file" accept=".pdf" required style="margin-bottom: 10px;">
+          
+          <button type="button" class="btn btn-primary" onclick="uploadPDFAssessment()">Upload Assessment</button>
+          <small class="muted">Only PDF files are accepted</small>
+        </div>
+      </div>
+    </form>
+    <div id="upload-status" style="margin-top: 10px;"></div>
+  </div>
+  {% endif %}
+  
+  <div class="card">
+    <h3 class="h3">Available Assessments</h3>
+    {% if tests %}
+    <ul class="list">
+      {% for t in tests %}
+      <li>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <a href="/assessments/test/{{ t.id }}">{{ t.title }}</a>
+            {% if t.due_at %}<span class="muted"> - Due {{ t.due_at }}</span>{% endif %}
+          </div>
+          {% if current_user.role in ['teacher', 'admin'] %}
+          <span class="muted">📋 Teacher View</span>
+          {% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">No assessments available yet.</p>
+    {% endif %}
+  </div>
+</section>
+
+<script>
+async function uploadPDFAssessment() {
+  const form = document.getElementById('pdf-upload-form')
+  const statusEl = document.getElementById('upload-status')
+  const title = document.getElementById('assessment-title').value.trim()
+  const description = document.getElementById('assessment-description').value.trim()
+  const classroomId = document.getElementById('classroom-select').value
+  const fileInput = document.getElementById('pdf-file')
+  
+  if (!title) {
+    statusEl.innerHTML = '<div style="color: red;">❌ Please enter an assessment title</div>'
+    return
+  }
+  
+  if (!classroomId) {
+    statusEl.innerHTML = '<div style="color: red;">❌ Please select a classroom</div>'
+    return
+  }
+  
+  if (!fileInput.files[0]) {
+    statusEl.innerHTML = '<div style="color: red;">❌ Please select a PDF file</div>'
+    return
+  }
+  
+  const file = fileInput.files[0]
+  if (!file.name.toLowerCase().endsWith('.pdf')) {
+    statusEl.innerHTML = '<div style="color: red;">❌ Only PDF files are allowed</div>'
+    return
+  }
+  
+  statusEl.innerHTML = '<div style="color: blue;">📤 Uploading assessment...</div>'
+  
+  const formData = new FormData()
+  formData.append('pdf_file', file)
+  formData.append('title', title)
+  formData.append('description', description)
+  formData.append('classroom_id', classroomId)
+  
+  try {
+    const response = await fetch('/assessments/upload', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCSRFToken()
+      },
+      body: formData
+    })
+    
+    const result = await response.json()
+    
+    if (response.ok && result.success) {
+      statusEl.innerHTML = '<div style="color: green;">✅ Assessment uploaded successfully!</div>'
+      
+      // Clear form
+      document.getElementById('assessment-title').value = ''
+      document.getElementById('assessment-description').value = ''
+      document.getElementById('classroom-select').value = ''
+      document.getElementById('pdf-file').value = ''
+      
+      // Refresh page after 2 seconds
+      setTimeout(() => {
+        location.reload()
+      }, 2000)
+    } else {
+      statusEl.innerHTML = `<div style="color: red;">❌ ${result.error || 'Upload failed'}</div>`
+    }
+  } catch (error) {
+    statusEl.innerHTML = `<div style="color: red;">❌ Upload error: ${error.message}</div>`
+  }
+}
+
+// Helper function for CSRF token
+function getCSRFToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]')
+  if (meta) return meta.getAttribute('content')
+  const cookies = document.cookie.split(';')
+  for (let cookie of cookies) {
+    const [name, value] = cookie.trim().split('=')
+    if (name === 'csrf_token') return value
+  }
+  return ''
+}
+</script>
+{% endblock %}

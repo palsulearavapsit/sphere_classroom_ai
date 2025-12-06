@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2 class="h2">Classroom Manager</h2>
+  <div class="grid-2 gap-3">
+    <div>
+      <h3 class="h3">My Classrooms</h3>
+      <div id="class-list">
+        {% for cls in classes %}
+        <div class="card" style="margin-bottom: 10px; padding: 15px;">
+          <h4>{{ cls.name }}</h4>
+          <p><strong>Join Code:</strong> <span style="font-family: monospace; background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">{{ cls.join_code }}</span></p>
+          <small class="muted">Students can join using this code</small>
+          <div style="margin-top: 10px; display: flex; gap: 10px;">
+            <a href="/classrooms/{{ cls.id }}" class="btn btn-primary">View Classroom</a>
+            {% if current_user.role in ['teacher', 'admin'] %}
+            <button class="btn btn-danger delete-classroom-btn" data-classroom-id="{{ cls.id }}">Delete</button>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <button class="btn" onclick="location.reload()">Refresh</button>
+    </div>
+    <div>
+      <h3 class="h3">Actions</h3>
+      <div class="grid-1 gap-2">
+        {% if current_user.role in ['teacher', 'admin'] %}
+        <div class="card" style="padding: 15px;">
+          <h4>Create New Classroom</h4>
+          <label>Classroom Name</label>
+          <input id="new-class-name" placeholder="e.g. Math 101, Chemistry A" style="margin-bottom: 10px;">
+          <button class="btn btn-primary" id="create-classroom-btn">Create Classroom</button>
+          <small class="muted">A unique join code will be generated automatically</small>
+        </div>
+        {% endif %}
+        
+        {% if current_user.role == 'student' %}
+        <div class="card" style="padding: 15px;">
+          <h4>Join Classroom</h4>
+          <label>Join Code</label>
+          <input id="join-code" placeholder="e.g. ABC123" style="margin-bottom: 10px;">
+          <button class="btn btn-primary" id="join-classroom-btn">Join Classroom</button>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+  // Create classroom button
+  const createBtn = document.getElementById('create-classroom-btn');
+  if (createBtn) {
+    createBtn.addEventListener('click', createClassroom);
+  }
+  
+  // Join classroom button
+  const joinBtn = document.getElementById('join-classroom-btn');
+  if (joinBtn) {
+    joinBtn.addEventListener('click', joinClassroom);
+  }
+  
+  // Delete classroom buttons
+  const deleteButtons = document.querySelectorAll('.delete-classroom-btn');
+  deleteButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      const classroomId = this.getAttribute('data-classroom-id');
+      deleteClassroom(classroomId);
+    });
+  });
+});
+
+async function createClassroom() {
+  const name = document.getElementById("new-class-name").value.trim()
+  if (!name) {
+    alert("Please enter a classroom name")
+    return
+  }
+  
+  try {
+    const r = await fetch("/classrooms/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCSRFToken()
+      },
+      body: JSON.stringify({ name })
+    })
+    
+    if (r.ok) {
+      const classroom = await r.json()
+      alert(`Classroom "${classroom.name}" created successfully!\nJoin Code: ${classroom.join_code}`)
+      location.reload()
+    } else {
+      alert("Failed to create classroom")
+    }
+  } catch (error) {
+    alert("Error creating classroom: " + error.message)
+  }
+}
+
+async function joinClassroom() {
+  const code = document.getElementById("join-code").value.trim().toUpperCase()
+  if (!code) {
+    alert("Please enter a join code")
+    return
+  }
+  
+  try {
+    const r = await fetch("/classrooms/join", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCSRFToken()
+      },
+      body: JSON.stringify({ code })
+    })
+    
+    const result = await r.json()
+    if (result.ok) {
+      alert("Successfully joined classroom!")
+      location.reload()
+    } else {
+      alert("Failed to join classroom. Please check the join code.")
+    }
+  } catch (error) {
+    alert("Error joining classroom: " + error.message)
+  }
+}
+
+async function deleteClassroom(id) {
+  if (!confirm("Are you sure you want to delete this classroom?")) {
+    return
+  }
+  
+  try {
+    const r = await fetch("/classrooms/delete", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCSRFToken()
+      },
+      body: JSON.stringify({ id })
+    })
+    
+    const result = await r.json()
+    if (result.ok) {
+      alert("Classroom deleted successfully!")
+      location.reload()
+    } else {
+      alert("Failed to delete classroom")
+    }
+  } catch (error) {
+    alert("Error deleting classroom: " + error.message)
+  }
+}
+
+// Helper function for CSRF token
+function getCSRFToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]')
+  if (meta) return meta.getAttribute('content')
+  const cookies = document.cookie.split(';')
+  for (let cookie of cookies) {
+    const [name, value] = cookie.trim().split('=')
+    if (name === 'csrf_token') return value
+  }
+  return ''
+}
+</script>
+{% endblock %}

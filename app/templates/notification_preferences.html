@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Notification Preferences{% endblock %}
+
+{% block content %}
+<section class="card">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow">
+                    <div class="card-header">
+                        <h1 class="h3 mb-2 text-primary">📧 Email Notification Preferences</h1>
+                        <p class="text-muted mb-0">Choose which notifications you'd like to receive via email.</p>
+                    </div>
+                    <div class="card-body">
+                        <form id="preferencesForm">
+                            <!-- Assignment Notifications -->
+                            <div class="card mb-3">
+                                <div class="card-body d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="card-title text-dark">📝 Assignment Notifications</h5>
+                                        <p class="card-text text-muted small">Get notified when new assignments are posted</p>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="email_assignments" 
+                                               {% if preferences.email_assignments %}checked{% endif %}>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Grade Notifications -->
+                            <div class="card mb-3">
+                                <div class="card-body d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="card-title text-dark">🎯 Grade Notifications</h5>
+                                        <p class="card-text text-muted small">Get notified when assignments are graded</p>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="email_grades" 
+                                               {% if preferences.email_grades %}checked{% endif %}>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Enrollment Notifications -->
+                            <div class="card mb-3">
+                                <div class="card-body d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="card-title text-dark">👥 Enrollment Notifications</h5>
+                                        <p class="card-text text-muted small">Get notified about classroom enrollments</p>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="email_enrollments" 
+                                               {% if preferences.email_enrollments %}checked{% endif %}>
+                                    </div>
+                            </div>
+
+                            <!-- Reminder Notifications -->
+                            <div class="card mb-3">
+                                <div class="card-body d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="card-title text-dark">⏰ Deadline Reminders</h5>
+                                        <p class="card-text text-muted small">Get reminded about upcoming assignment deadlines</p>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="email_reminders" 
+                                               {% if preferences.email_reminders %}checked{% endif %}>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Announcement Notifications -->
+                            <div class="card mb-3">
+                                <div class="card-body d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="card-title text-dark">📢 System Announcements</h5>
+                                        <p class="card-text text-muted small">Get notified about system updates and maintenance</p>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="email_announcements" 
+                                               {% if preferences.email_announcements %}checked{% endif %}>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Save Button -->
+                            <div class="d-grid gap-2 mt-4">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    💾 Save Preferences
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Success/Error Messages -->
+<div id="messageContainer" class="position-fixed" style="top: 20px; right: 20px; z-index: 1060;"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('preferencesForm');
+    
+    // Show message function
+    function showMessage(message, type = 'success') {
+        const container = document.getElementById('messageContainer');
+        const messageDiv = document.createElement('div');
+        const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+        messageDiv.className = `alert ${alertClass} alert-dismissible fade show shadow`;
+        messageDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        container.appendChild(messageDiv);
+        
+        setTimeout(() => {
+            if (messageDiv.parentNode) {
+                messageDiv.remove();
+            }
+        }, 5000);
+    }
+    
+    // Save preferences
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const preferences = {
+            email_assignments: document.getElementById('email_assignments').checked,
+            email_grades: document.getElementById('email_grades').checked,
+            email_enrollments: document.getElementById('email_enrollments').checked,
+            email_reminders: document.getElementById('email_reminders').checked,
+            email_announcements: document.getElementById('email_announcements').checked
+        };
+        
+        fetch('/notifications/preferences', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify(preferences)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('✅ Preferences saved successfully!', 'success');
+            } else {
+                showMessage('❌ Failed to save preferences', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage('❌ An error occurred', 'error');
+        });
+    });
+});
+</script>
+{% endblock %}

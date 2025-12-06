@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+
+{% block title %}AI Auto-Grading Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">🤖 AI Auto-Grading Dashboard</h1>
+        <p class="text-muted">Intelligently grade assignments with AI-powered feedback and scoring</p>
+    </div>
+
+    <!-- Quick Stats Row -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Assignments
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ assignments|length }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                AI Graded
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ assignments|sum(attribute='ai_graded_count') }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-robot fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Pending Grading
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ assignments|sum(attribute='submission_count') - assignments|sum(attribute='ai_graded_count') }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Total Submissions
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ assignments|sum(attribute='submission_count') }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-file-alt fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Grading Features -->
+    <div class="row">
+        <div class="col-lg-4 mb-4">
+            <div class="card bg-primary text-white shadow">
+                <div class="card-body">
+                    <div class="text-white-50 small">AI FEATURE</div>
+                    <div class="text-white">🎯 Intelligent Scoring</div>
+                    <div class="text-white-75 small mt-2">AI analyzes content quality, writing mechanics, and comprehension for accurate scoring</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 mb-4">
+            <div class="card bg-success text-white shadow">
+                <div class="card-body">
+                    <div class="text-white-50 small">AI FEATURE</div>
+                    <div class="text-white">📝 Detailed Feedback</div>
+                    <div class="text-white-75 small mt-2">Provides specific suggestions for improvement and highlights strengths</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 mb-4">
+            <div class="card bg-info text-white shadow">
+                <div class="card-body">
+                    <div class="text-white-50 small">AI FEATURE</div>
+                    <div class="text-white">⚡ Instant Results</div>
+                    <div class="text-white-75 small mt-2">Grade multiple assignments in seconds with consistent evaluation criteria</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignments List -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">📚 Your Assignments</h6>
+        </div>
+        <div class="card-body">
+            {% if assignments %}
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Assignment</th>
+                            <th>Classroom</th>
+                            <th>Submissions</th>
+                            <th>AI Graded</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for assignment in assignments %}
+                        <tr>
+                            <td>
+                                <div class="font-weight-bold">{{ assignment.title }}</div>
+                                <div class="small text-muted">ID: {{ assignment.id }}</div>
+                            </td>
+                            <td>{{ assignment.classroom_name or 'No classroom' }}</td>
+                            <td>
+                                <span class="badge badge-primary">📊 {{ assignment.submission_count }}</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-success">🤖 {{ assignment.ai_graded_count }}</span>
+                            </td>
+                            <td>
+                                {% if assignment.submission_count > assignment.ai_graded_count %}
+                                <span class="badge badge-warning">⏳ {{ assignment.submission_count - assignment.ai_graded_count }} pending</span>
+                                {% else %}
+                                <span class="badge badge-success">✅ Complete</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="/grading/grade/{{ assignment.id }}" 
+                                   class="btn btn-secondary btn-sm mr-2">
+                                    📋 Grade Submissions
+                                </a>
+                                {% if assignment.submission_count > assignment.ai_graded_count %}
+                                <button data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}"
+                                        class="auto-grade-btn btn btn-secondary btn-sm">
+                                    🤖 Auto-Grade All
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <div class="mb-4" style="font-size: 3rem;">📝</div>
+                <h3 class="h5 text-gray-900 mb-2">No assignments yet</h3>
+                <p class="text-muted mb-4">Create assignments to start using AI auto-grading</p>
+                <a href="/classrooms/" class="btn btn-secondary">
+                    Go to Classrooms
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- AI Grading Tools section removed -->
+</div>
+
+<!-- Auto-Grading Modal -->
+<div class="modal fade" id="autoGradeModal" tabindex="-1" aria-labelledby="autoGradeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="autoGradeModalLabel">🤖 Auto-Grade Assignment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-4">Select the assignment type for optimal grading:</p>
+                
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="assignment_type" value="essay" id="essay" checked>
+                        <label class="form-check-label" for="essay">
+                            📝 Essay/Long Response
+                        </label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="assignment_type" value="short_answer" id="short_answer">
+                        <label class="form-check-label" for="short_answer">
+                            💬 Short Answer
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="assignment_type" value="math_problem" id="math_problem">
+                        <label class="form-check-label" for="math_problem">
+                            🔢 Math Problem
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="assignment_type" value="general" id="general">
+                        <label class="form-check-label" for="general">
+                            📚 General Assignment
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelAutoGrade" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-secondary" id="executeAutoGrade">
+                    Start Grading
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success/Error Messages -->
+<div id="messageContainer" class="position-fixed" style="top: 20px; right: 20px; z-index: 1060;"></div>
+
+<script>
+let currentAssignmentId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-grade buttons
+    document.querySelectorAll('.auto-grade-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const assignmentId = this.dataset.assignmentId;
+            const assignmentTitle = this.dataset.assignmentTitle;
+            autoGradeAssignment(assignmentId, assignmentTitle);
+        });
+    });
+    
+    // Modal buttons - Bootstrap modals handle most of the hiding automatically
+    document.getElementById('executeAutoGrade').addEventListener('click', executeAutoGrade);
+});
+
+function autoGradeAssignment(assignmentId, assignmentTitle) {
+    currentAssignmentId = assignmentId;
+    const modal = new bootstrap.Modal(document.getElementById('autoGradeModal'));
+    modal.show();
+}
+
+function hideAutoGradeModal() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('autoGradeModal'));
+    if (modal) modal.hide();
+}
+
+function executeAutoGrade() {
+    const assignmentType = document.querySelector('input[name="assignment_type"]:checked').value;
+    
+    hideAutoGradeModal();
+    showMessage('🤖 Starting AI auto-grading...', 'info');
+    
+    fetch(`/grading/grade/${currentAssignmentId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            assignment_type: assignmentType
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage(`✅ Successfully graded ${data.graded_count} submissions!`, 'success');
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            showMessage(`❌ Error: ${data.error}`, 'error');
+        }
+    })
+    .catch(error => {
+        showMessage('❌ Grading failed', 'error');
+        console.error('Error:', error);
+    });
+    
+    hideAutoGradeModal();
+}
+
+function showMessage(message, type = 'info') {
+    const container = document.getElementById('messageContainer');
+    const messageDiv = document.createElement('div');
+    
+    const alertClasses = {
+        success: 'alert alert-success',
+        error: 'alert alert-danger',
+        info: 'alert alert-info'
+    };
+    
+    messageDiv.className = `${alertClasses[type]} alert-dismissible fade show shadow`;
+    messageDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    container.appendChild(messageDiv);
+    
+    setTimeout(() => {
+        if (messageDiv.parentNode) {
+            messageDiv.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2 class="h2">Document Upload & Management</h2>
+  <p>Upload documents here to enhance your AI Tutor conversations with context from your files.</p>
+  
+  <div class="card">
+    <h3 class="h3">Upload Document</h3>
+    <p><strong>Supported formats:</strong> PDF, DOCX, DOC, TXT, MD</p>
+    <form action="/rag/ingest" method="post" enctype="multipart/form-data" class="grid-1 gap-2">
+      <input type="file" name="file" accept=".txt,.pdf,.doc,.docx,.md" required />
+      <input type="text" name="namespace" value="default" placeholder="Namespace (optional)" />
+      <button class="btn btn-primary">Upload Document</button>
+    </form>
+    <small style="color: #666;">
+      📄 PDF files will be processed page by page<br>
+      📝 Word documents (.doc/.docx) will extract all text<br>
+      📋 Text files (.txt/.md) will be processed as-is
+    </small>
+  </div>
+  
+  <div class="card mt-3">
+    <h3 class="h3">System Status</h3>
+    <p><strong>Documents:</strong> {{ status.documents }}</p>
+    <p><strong>Text Chunks:</strong> {{ status.chunks }}</p>
+    <button class="btn" onclick="reindex()">Rebuild Search Index</button>
+  </div>
+  
+  <div class="card mt-3">
+    <h3 class="h3">Test Search</h3>
+    <p>Test if your documents are being found correctly:</p>
+    <input id="rag-q" placeholder="Enter search query..." style="width: 100%; margin-bottom: 10px;">
+    <button class="btn" onclick="ragSearch()">Search Documents</button>
+    <pre id="rag-out" style="background: #f5f5f5; padding: 10px; border-radius: 4px; margin-top: 10px;"></pre>
+  </div>
+  
+  <div class="alert" style="background-color: #fff3e0; padding: 15px; margin-top: 20px; border-radius: 4px;">
+    <strong>💡 How it works:</strong><br>
+    1. Upload your documents here<br>
+    2. Go to the <a href="/tutor/">AI Tutor</a><br>
+    3. Ask questions - the AI will automatically use your documents for context!
+  </div>
+</section>
+{% endblock %}
